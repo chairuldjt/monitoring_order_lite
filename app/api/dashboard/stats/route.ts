@@ -117,20 +117,25 @@ export async function GET() {
       }))
       .slice(0, 10);
 
-    // 5. Repeat orders — group by first line of catatan
-    const titleCounts: Record<string, { count: number; units: Set<string> }> = {};
+    // 5. Repeat orders — group by service name (preferred) or catatan
+    const repeatGroups: Record<string, { count: number; units: Set<string> }> = {};
     for (const order of allActiveOrders) {
-      const title = (order.catatan || '').split('\n')[0]?.trim();
-      if (!title) continue;
-      if (!titleCounts[title]) {
-        titleCounts[title] = { count: 0, units: new Set() };
+      const serviceName = (order as any).service_name?.trim();
+      const noteTitle = (order.catatan || '').split('\n')[0]?.trim();
+      
+      const groupKey = serviceName || noteTitle;
+      if (!groupKey) continue;
+
+      if (!repeatGroups[groupKey]) {
+        repeatGroups[groupKey] = { count: 0, units: new Set() };
       }
-      titleCounts[title].count++;
+      repeatGroups[groupKey].count++;
       if (order.location_desc) {
-        titleCounts[title].units.add(order.location_desc);
+        repeatGroups[groupKey].units.add(order.location_desc);
       }
     }
-    const repeatOrders = Object.entries(titleCounts)
+
+    const repeatOrders = Object.entries(repeatGroups)
       .filter(([, v]) => v.count > 1)
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 5)

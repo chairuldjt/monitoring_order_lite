@@ -1,0 +1,20 @@
+Fetching service catalog list...
+Catalog count: 51
+Sample catalog: {
+  "id": 3,
+  "service_name": "AUDIO"
+}
+
+Fetching raw order list for Status 11...
+Raw order keys: ["order_id","order_no","create_date","order_by","location_desc","ext_phone","catatan","status_desc","teknisi"]
+Raw order sample: {
+  "order_id": 264411,
+  "order_no": "20.54711",
+  "create_date": "13 Mar 26 - 17:13",
+  "order_by": "Balam Proyoga",
+  "location_desc": "icu central",
+  "ext_phone": "wag",
+  "catatan": "pc sering hang",
+  "status_desc": "FOLLOW UP",
+  "teknisi": "Ardian Adi Saputra|"
+}

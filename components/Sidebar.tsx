@@ -19,24 +19,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const menuItems = [
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { name: 'Orders', path: '/orders', icon: ClipboardList },
-        { name: 'Overdue Follow Up', path: '/overdue', icon: AlertTriangle },
+        { name: 'Over Follow Up', path: '/overdue', icon: AlertTriangle },
+        { name: 'Over Pending', path: '/pending', icon: Clock },
         { name: 'Repeat Orders', path: '/repeat', icon: Repeat },
-        { name: 'Pending Lama', path: '/pending', icon: Clock },
-        { name: 'Analitik Order', path: '/analytics', icon: BarChart2 },
         { name: 'Tech Breakdown', path: '/breakdown', icon: Users },
-        { name: 'Tracking', path: '/tracking', icon: Search },
-        { name: 'Pengaturan', path: '/settings', icon: Settings },
+        { name: 'Reports', path: '/reports', icon: BarChart2 },
+        { name: 'Setting', path: '/settings', icon: Settings },
     ];
-
-    // Add Admin-only menu items
-    if (user.role === 'admin') {
-        const settingsIndex = menuItems.findIndex(item => item.name === 'Pengaturan');
-        if (settingsIndex !== -1) {
-            menuItems.splice(settingsIndex, 0, { name: 'Manajemen User', path: '/users', icon: Users });
-        } else {
-            menuItems.push({ name: 'Manajemen User', path: '/users', icon: Users });
-        }
-    }
 
     const isActive = (path: string) => {
         if (path === '/orders') {

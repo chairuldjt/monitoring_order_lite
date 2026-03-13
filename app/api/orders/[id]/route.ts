@@ -17,10 +17,11 @@ export async function GET(
 
         const { id } = await params;
 
-        // Fetch detail and history concurrently from SIMRS
-        const [order, history] = await Promise.all([
+        // Fetch detail, history, and photos concurrently from SIMRS
+        const [order, history, photos] = await Promise.all([
             getSIMRSOrderDetail(id),
-            getSIMRSOrderHistory(id)
+            getSIMRSOrderHistory(id),
+            getSIMRSOrderPhotos(id)
         ]);
 
         if (!order) {
@@ -34,6 +35,7 @@ export async function GET(
             data: {
                 ...order,
                 status: localStatus,
+                photos: photos || [],
                 history: history.map((h: any) => ({
                     id: h.history_id || Math.random(),
                     status: h.status_desc?.toLowerCase().replace(' ', '_') || 'unknown',

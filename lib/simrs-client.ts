@@ -1,12 +1,9 @@
 /**
  * SIMRS Order API Client
  * Handles authentication and data fetching from the SIMRS Order Teknisi system.
- * API Base: http://103.148.235.37:5010
- * Auth: Custom header `access-token` with JWT
  */
 
 import axios from 'axios';
-import { cache } from './cache';
 
 // SIMRS API Config from .env
 const SIMRS_API_URL = process.env.SIMRS_API_URL || 'http://103.148.235.37:5010';
@@ -17,13 +14,13 @@ let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
 
 // Status ID mapping from SIMRS
-export const SIMRS_STATUS_MAP: Record<string, { id: number; local: string }> = {
-    'OPEN': { id: 10, local: 'open' },
-    'FOLLOW UP': { id: 11, local: 'follow_up' },
-    'RUNNING': { id: 12, local: 'running' },
-    'PENDING': { id: 13, local: 'pending' },
-    'DONE': { id: 15, local: 'done' },
-    'VERIFIED': { id: 30, local: 'verified' },
+export const SIMRS_STATUS_MAP: Record<number, { id: number; local: string; label: string }> = {
+    10: { id: 10, local: 'open', label: 'OPEN' },
+    11: { id: 11, local: 'follow_up', label: 'FOLLOW UP' },
+    12: { id: 12, local: 'running', label: 'RUNNING' },
+    13: { id: 13, local: 'pending', label: 'PENDING' },
+    15: { id: 15, local: 'done', label: 'DONE' },
+    30: { id: 30, local: 'verified', label: 'VERIFIED' },
 };
 
 // Reverse map: status_id → local status
@@ -46,10 +43,13 @@ export interface SIMRSOrder {
     catatan: string;
     status_desc: string;
     status_id?: number;
+    service_catalog_id?: number | string;
     teknisi: string;
+    service_name?: string;
 }
 
 export interface SIMRSSummary {
+    all?: number;
     open: number;
     follow_up: number;
     running: number;
@@ -58,14 +58,50 @@ export interface SIMRSSummary {
     pending: number;
 }
 
+// Internal cache storage
+const internalCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes for lists
+const DETAIL_CACHE_TTL = 60 * 60 * 1000; // 1 hour for order details - much longer to improve speed
+
+export const cacheManager = {
+    get: (key: string): any | undefined => {
+        const entry = internalCache.get(key);
+        const ttl = key.startsWith('order_detail_') ? DETAIL_CACHE_TTL : CACHE_TTL;
+        if (entry && Date.now() - entry.timestamp < ttl) {
+            return entry.data;
+        }
+        internalCache.delete(key);
+        return undefined;
+    },
+    set: (key: string, data: any) => {
+        internalCache.set(key, { data, timestamp: Date.now() });
+    },
+    delete: (key: string) => {
+        internalCache.delete(key);
+    },
+    clear: () => {
+        internalCache.clear();
+    },
+    getSummaryState: (): { counts: SIMRSSummary; timestamp: number } | undefined => {
+        const entry = internalCache.get('summary_state');
+        if (entry && Date.now() - entry.timestamp < 5000) {
+            return entry.data;
+        }
+        internalCache.delete('summary_state');
+        return undefined;
+    },
+    setSummaryState: (summary: SIMRSSummary) => {
+        internalCache.set('summary_state', { 
+            data: { counts: summary, timestamp: Date.now() }, 
+            timestamp: Date.now() 
+        });
+    }
+};
+
 /**
  * Login to SIMRS and get JWT token
- * Endpoint: POST /secure/auth_validate_login
- * Body: { login: string, pwd: string }
- * Response: { result: true, token: "..." }
  */
 export async function simrsLogin(): Promise<string> {
-    // Return cached token if still valid
     if (cachedToken && Date.now() < tokenExpiry) {
         return cachedToken;
     }
@@ -77,16 +113,11 @@ export async function simrsLogin(): Promise<string> {
         });
 
         const data = response.data;
-
-        // Response format: { result: true, token: "eyJ..." }
         if (!data.result || !data.token) {
-            console.error('[SIMRS] Login failed. Response data:', data);
-            throw new Error('SIMRS login returned invalid response');
+            throw new Error('SIMRS login failed');
         }
 
         cachedToken = data.token;
-
-        // Cache for 8 hours
         tokenExpiry = Date.now() + 8 * 60 * 60 * 1000;
         return cachedToken!;
     } catch (error: any) {
@@ -97,7 +128,7 @@ export async function simrsLogin(): Promise<string> {
 }
 
 /**
- * Make authenticated request to SIMRS API with retry logic
+ * Make authenticated request to SIMRS API
  */
 async function simrsFetch(endpoint: string, options: any = {}, retryCount = 0): Promise<any> {
     const token = await simrsLogin();
@@ -117,15 +148,11 @@ async function simrsFetch(endpoint: string, options: any = {}, retryCount = 0): 
 
         return response.data;
     } catch (error: any) {
-        // Handle 429 Too Many Requests
         if (error.response?.status === 429 && retryCount < 3) {
             const delay = 5000 * (retryCount + 1);
-            console.warn(`[SIMRS] 429 Too Many Requests. Retrying in ${delay / 1000}s... (Attempt ${retryCount + 1}/3)`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return simrsFetch(endpoint, options, retryCount + 1);
         }
-
-        // If 401/403, invalidate token and retry once
         if ((error.response?.status === 401 || error.response?.status === 403) && retryCount === 0) {
             cachedToken = null;
             tokenExpiry = 0;
@@ -149,40 +176,44 @@ export async function getSIMRSSummary(): Promise<SIMRSSummary> {
         verified: result.verified || 0,
         pending: result.pending || 0,
     };
-
-    // Update cache summary state
-    cache.setSummaryState(summary);
-
+    cacheManager.setSummaryState(summary);
     return summary;
 }
 
 /**
- * Get orders by status from SIMRS (with optional caching)
+ * Get orders by status from SIMRS
  */
 export async function getSIMRSOrdersByStatus(statusId: number, bypassCache = false): Promise<SIMRSOrder[]> {
     const cacheKey = `orders_status_${statusId}`;
     if (!bypassCache) {
-        const cached = cache.get(cacheKey);
+        const cached = cacheManager.get(cacheKey);
         if (cached) return cached;
     }
 
     try {
         const data = await simrsFetch(`/order/order_list_by_status/${statusId}`);
-        const orders = (data.result || data.data || data || []).map((order: any) => ({
-            order_id: order.order_id || order.id,
-            order_no: order.order_no || '',
-            create_date: order.create_date || order.created_at || '',
-            order_by: order.order_by || order.requester || '',
-            location_desc: order.location_desc || order.location || '',
-            ext_phone: order.ext_phone || order.phone || '',
-            catatan: getCleanedSIMRSNote(order),
-            status_desc: order.status_desc || order.status || '',
-            status_id: order.status_id,
-            teknisi: (order.teknisi || '').replace(/\|$/, '').trim(),
-        }));
+        const rawOrders = data.result || data.data || data || [];
+        const orders = rawOrders.map((order: any) => {
+            const rawDate = order.create_date || order.created_at || '';
+            const parsedDate = parseSIMRSDate(rawDate);
+            
+            return {
+                order_id: order.order_id || order.id,
+                order_no: order.order_no || '',
+                create_date: parsedDate ? formatToStandardDate(parsedDate) : rawDate,
+                order_by: order.order_by || order.requester || '',
+                location_desc: order.location_desc || order.location || '',
+                ext_phone: order.ext_phone || order.phone || '',
+                catatan: getCleanedSIMRSNote(order),
+                status_desc: order.status_desc || order.status || '',
+                status_id: order.status_id,
+                service_catalog_id: order.service_catalog_id || order.service_id,
+                teknisi: (order.teknisi || '').replace(/\|$/, '').trim(),
+                service_name: order.service_name || order.service || '',
+            };
+        });
 
-        // Cache the result
-        cache.set(cacheKey, orders);
+        cacheManager.set(cacheKey, orders);
         return orders;
     } catch (error) {
         console.error(`Error fetching status ${statusId}:`, error);
@@ -193,17 +224,12 @@ export async function getSIMRSOrdersByStatus(statusId: number, bypassCache = fal
 /**
  * Smart fetch: only refetch if summary has changed
  */
-/**
- * Smart fetch: only refetch if summary has changed.
- * Uses a short-lived memory cache (5s) for the summary to avoid redundant hits in bulk fetch.
- */
 export async function getOptimizedSIMRSOrders(statusId: number): Promise<SIMRSOrder[]> {
-    const cachedSummaryState = cache.getSummaryState();
+    const cachedSummaryState = cacheManager.getSummaryState();
 
-    // Fetch fresh summary only if strictly necessary (expired or missing)
     let freshSummary: SIMRSSummary;
     if (cachedSummaryState && (Date.now() - cachedSummaryState.timestamp < 5000)) {
-        freshSummary = cachedSummaryState.counts as unknown as SIMRSSummary;
+        freshSummary = cachedSummaryState.counts;
     } else {
         freshSummary = await getSIMRSSummary();
     }
@@ -218,14 +244,11 @@ export async function getOptimizedSIMRSOrders(statusId: number): Promise<SIMRSOr
     };
 
     const key = statusMap[statusId];
-
-    // If counts match AND the specific list is in cache, return it
     if (cachedSummaryState && key && cachedSummaryState.counts[key] === freshSummary[key]) {
-        const cachedList = cache.get(`orders_status_${statusId}`);
+        const cachedList = cacheManager.get(`orders_status_${statusId}`);
         if (cachedList) return cachedList;
     }
 
-    // Force fetch and refresh cache
     return getSIMRSOrdersByStatus(statusId, true);
 }
 
@@ -238,17 +261,22 @@ export async function getSIMRSOrderDetail(orderId: number | string): Promise<SIM
         const order = data.result || data.data;
         if (!order) return null;
 
+        const rawDate = order.create_date || order.created_at || order.status_date || '';
+        const parsedDate = parseSIMRSDate(rawDate);
+
         return {
             order_id: order.order_id || order.id,
             order_no: order.order_no || '',
-            create_date: order.create_date || '',
+            create_date: parsedDate ? formatToStandardDate(parsedDate) : rawDate,
             order_by: order.order_by || order.requester || '',
             location_desc: order.location_desc || '',
             ext_phone: order.ext_phone || '',
             catatan: getCleanedSIMRSNote(order),
             status_desc: order.status_desc || '',
             status_id: parseInt(order.status_code) || order.status_id,
+            service_catalog_id: order.service_catalog_id || order.service_id,
             teknisi: (order.nama_teknisi || order.teknisi || '').replace(/\|$/, '').trim(),
+            service_name: order.service_name || order.service || '',
         };
     } catch (error) {
         console.error(`Error fetching order detail ${orderId}:`, error);
@@ -264,7 +292,6 @@ export async function getSIMRSOrderHistory(orderId: number | string): Promise<an
         const data = await simrsFetch(`/order/order_history_by_id/${orderId}`);
         return data.result || data.data || [];
     } catch (error) {
-        console.error(`Error fetching order history ${orderId}:`, error);
         return [];
     }
 }
@@ -277,24 +304,12 @@ export async function getSIMRSOrderPhotos(orderId: number | string): Promise<any
         const data = await simrsFetch(`/order/order_photos/${orderId}`);
         return data.result || data.data || [];
     } catch (error) {
-        console.error(`Error fetching order photos ${orderId}:`, error);
         return [];
     }
 }
 
 /**
- * Get repair/perbaikan list from SIMRS
- */
-export async function getSIMRSRepairList(filter: string = ''): Promise<any[]> {
-    const data = await simrsFetch('/repair/list', {
-        method: 'POST',
-        body: JSON.stringify({ filter }),
-    });
-    return data.result || data.data || data || [];
-}
-
-/**
- * Find order by order_no by searching through status lists (Live)
+ * Find order by order_no
  */
 export async function findSIMRSOrderByNo(orderNo: string): Promise<SIMRSOrder | null> {
     const statusIds = [10, 11, 12, 13, 15, 30];
@@ -307,22 +322,21 @@ export async function findSIMRSOrderByNo(orderNo: string): Promise<SIMRSOrder | 
 }
 
 /**
- * Parse SIMRS date format "DD Mon YY - HH:mm" to Date object
+ * Parse SIMRS date format
  */
 export function parseSIMRSDate(dateStr: string): Date | null {
     if (!dateStr) return null;
 
     try {
-        // Try standard date parse first
         const d = new Date(dateStr);
         if (!isNaN(d.getTime())) return d;
 
         const months: Record<string, number> = {
             'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
             'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11,
+            'Mei': 4, 'Des': 11, 'Ags': 7, 'Agu': 7, 'Okt': 9,
         };
 
-        // Format A: "DD Mon YY - HH:mm" (e.g. "25 Feb 26 - 15:04")
         const matchA = dateStr.match(/(\d{1,2})\s+(\w{3})\s+(\d{2,4})\s*-?\s*(\d{2}):(\d{2})/);
         if (matchA) {
             const day = parseInt(matchA[1]);
@@ -331,16 +345,9 @@ export function parseSIMRSDate(dateStr: string): Date | null {
             if (year < 100) year += 2000;
             const hour = parseInt(matchA[4]);
             const minute = parseInt(matchA[5]);
-
-            // Assume Asia/Jakarta (WIB)
-            const date = new Date(year, month, day, hour, minute);
-            const wibOffset = 7 * 60; // WIB is UTC+7
-            const localOffset = date.getTimezoneOffset(); // in minutes
-            date.setMinutes(date.getMinutes() + localOffset + wibOffset);
-            return date;
+            return new Date(year, month, day, hour, minute);
         }
 
-        // Format B: "Mon DD YYYY HH:mmAM/PM" (e.g. "Feb 25 2026  9:14PM")
         const matchB = dateStr.match(/(\w{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{1,2}):(\d{2})(AM|PM)?/i);
         if (matchB) {
             const month = months[matchB[1]];
@@ -352,13 +359,7 @@ export function parseSIMRSDate(dateStr: string): Date | null {
 
             if (ampm === 'PM' && hour < 12) hour += 12;
             if (ampm === 'AM' && hour === 12) hour = 0;
-
-            // Assume Asia/Jakarta (WIB)
-            const date = new Date(year, month, day, hour, minute);
-            const wibOffset = 7 * 60;
-            const localOffset = date.getTimezoneOffset();
-            date.setMinutes(date.getMinutes() + localOffset + wibOffset);
-            return date;
+            return new Date(year, month, day, hour, minute);
         }
 
         return null;
@@ -368,46 +369,72 @@ export function parseSIMRSDate(dateStr: string): Date | null {
 }
 
 /**
+ * Format Date object to standard SIMRS string
+ */
+export function formatToStandardDate(date: Date): string {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = months[date.getMonth()];
+    const y = date.getFullYear().toString().slice(-2);
+    const h = date.getHours().toString().padStart(2, '0');
+    const min = date.getMinutes().toString().padStart(2, '0');
+    return `${d} ${m} ${y} - ${h}:${min}`;
+}
+
+/**
  * Map SIMRS status description to local status
  */
 export function mapSIMRSStatus(statusDesc: string): string {
     const upper = (statusDesc || '').toUpperCase().trim();
-    const mapping = SIMRS_STATUS_MAP[upper];
-    return mapping?.local || 'open';
+    const foundStatus = Object.values(SIMRS_STATUS_MAP).find(status => status.label === upper);
+    return foundStatus?.local || 'open';
 }
 
 /**
- * Clean and prioritize SIMRS order notes to ensure meaningful text is displayed.
- * Filters out "fake" notes that only contain the order number.
+ * Clean SIMRS order notes
  */
 export function getCleanedSIMRSNote(order: any): string {
     const rawNote = (order.catatan || order.note || order.description || '').trim();
     const orderNo = (order.order_no || '').trim();
-
-    // If the note is essentially just the order number, treat it as empty
     if (rawNote === orderNo || rawNote.toLowerCase() === `order ${orderNo.toLowerCase()}`) {
         return '';
     }
-
     return rawNote;
 }
 
 /**
- * Test SIMRS connection
+ * Enhanced fetch: Gets orders and populates their details
  */
-export async function testSIMRSConnection(): Promise<{ success: boolean; message: string; summary?: SIMRSSummary }> {
-    try {
-        await simrsLogin();
-        const summary = await getSIMRSSummary();
-        return {
-            success: true,
-            message: 'Connected to SIMRS successfully',
-            summary,
-        };
-    } catch (error: any) {
-        return {
-            success: false,
-            message: `SIMRS connection failed: ${error.message}`,
-        };
+export async function getSIMRSOrdersWithDetails(statusIds: number[]): Promise<SIMRSOrder[]> {
+    const allOrdersList: SIMRSOrder[] = [];
+    for (const sid of statusIds) {
+        const list = await getOptimizedSIMRSOrders(sid);
+        allOrdersList.push(...list);
     }
+    if (allOrdersList.length === 0) return [];
+
+    // Use higher concurrency for bulk detail fetching
+    const CONCURRENCY_LIMIT = 15; 
+    const finalResults: SIMRSOrder[] = [];
+    
+    for (let i = 0; i < allOrdersList.length; i += CONCURRENCY_LIMIT) {
+        const currentBatch = allOrdersList.slice(i, i + CONCURRENCY_LIMIT);
+        const batchResponses = await Promise.all(
+            currentBatch.map(async (o) => {
+                const uniqueId = o.order_id;
+                const cacheName = `order_detail_${uniqueId}`;
+                const cachedData = cacheManager.get(cacheName);
+                if (cachedData) return { ...o, ...cachedData };
+
+                const detailedInfo = await getSIMRSOrderDetail(uniqueId);
+                if (detailedInfo) {
+                    cacheManager.set(cacheName, detailedInfo);
+                    return { ...o, ...detailedInfo };
+                }
+                return o;
+            })
+        );
+        finalResults.push(...batchResponses);
+    }
+    return finalResults;
 }

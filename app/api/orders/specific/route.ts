@@ -2,18 +2,43 @@ import { NextResponse } from 'next/server';
 import { getPayloadFromCookie } from '@/lib/jwt';
 import {
     getOptimizedSIMRSOrders,
+    getSIMRSOrdersWithDetails,
     parseSIMRSDate,
 } from '@/lib/simrs-client';
+import { SIMRSOrder } from '@/lib/simrs-client';
+import pool from '@/lib/db';
+
+const NOISE_WORDS = new Set(['tolong', 'mohon', 'bantu', 'bantuan', 'segera', 'cek', 'dicek', 'perbaiki', 'perbaikan', 'rusak', 'ada', 'kendala', 'masalah', 'dari', 'unit', 'ruangan', 'terima', 'kasih', 'tks', 'sdh', 'sudah', 'yang', 'di', 'ke']);
+
+function getNoteFingerprint(note: string): string {
+    if (!note) return 'NO_NOTE';
+    
+    // Ambil baris pertama, bersihkan simbol dan angka
+    const clean = note.split('\n')[0]
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, ' ') 
+        .trim();
+
+    // Pisahkan kata, buang kata sampah, urutkan alfabetis
+    const words = clean.split(/\s+/)
+        .filter(w => w.length > 1 && !NOISE_WORDS.has(w))
+        .sort();
+
+    if (words.length === 0) return 'OTHER';
+    
+    // Gabungkan kembali menjadi key unik (misal: "ac_mati")
+    return words.join('_');
+}
 
 export async function GET(request: Request) {
     try {
         const payload = await getPayloadFromCookie();
         if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const searchParams = new URL(request.url).searchParams;
+        const { searchParams } = new URL(request.url);
         const type = searchParams.get('type') || 'overdue';
-        const search = (searchParams.get('search') || '').toLowerCase();
-        const searchType = searchParams.get('searchType') || 'all';
+        const search = (searchParams.get('search') || '').toLowerCase().trim();
+        const searchType = (searchParams.get('searchType') || 'all').toLowerCase().trim();
         const startDate = searchParams.get('startDate') || '';
         const endDate = searchParams.get('endDate') || '';
         const sort = searchParams.get('sort') || 'desc';
@@ -37,6 +62,7 @@ export async function GET(request: Request) {
                 case 'location': return (mappedItem.requester_unit || '').toLowerCase().includes(search);
                 case 'ext_phone': return (mappedItem.ext_phone || '').toLowerCase().includes(search);
                 case 'description': return (mappedItem.description || '').toLowerCase().includes(search);
+                case 'service': return (mappedItem.service_name || '').toLowerCase().includes(search) || (mappedItem.service_catalog_id?.toString() === search);
                 default: return false;
             }
         };
@@ -125,55 +151,103 @@ export async function GET(request: Request) {
         }
 
         if (type === 'repeat') {
-            const [followUpOrders, runningOrders, pendingOrders, doneOrders] = await Promise.all([
-                getOptimizedSIMRSOrders(11),
-                getOptimizedSIMRSOrders(12),
-                getOptimizedSIMRSOrders(13),
-                getOptimizedSIMRSOrders(15),
-            ]);
+            const groupBy = searchParams.get('groupBy') || 'location'; // 'location', 'extension', or 'service'
+            
+            // Build query based on filters
+            let query = `
+                SELECT 
+                    order_id, order_no, create_date, order_by, location_desc, 
+                    ext_phone, catatan, status_desc, status_id, 
+                    service_catalog_id, service_name, teknisi
+                FROM simrs_orders_cache
+                WHERE 1=1
+            `;
+            const queryParams: any[] = [];
 
-            // Raw pre-filter by date before aggregation for performance
-            const allActiveOrders = [...followUpOrders, ...runningOrders, ...pendingOrders, ...doneOrders].filter(o => {
-                const d = parseSIMRSDate(o.create_date);
-                return applyDateFilter(d);
-            });
+            if (startDate) {
+                query += ` AND create_date >= ?`;
+                queryParams.push(startDate + ' 00:00:00');
+            }
+            if (endDate) {
+                query += ` AND create_date <= ?`;
+                queryParams.push(endDate + ' 23:59:59');
+            }
 
-            const titleCounts: Record<string, { count: number; units: Set<string>; examples: any[] }> = {};
-            for (const order of allActiveOrders) {
-                const title = (order.catatan || '').split('\n')[0]?.trim();
-                if (!title) continue;
-                if (!titleCounts[title]) {
-                    titleCounts[title] = { count: 0, units: new Set(), examples: [] };
+            const searchLower = search?.toLowerCase();
+            if (searchLower) {
+                if (groupBy === 'location') {
+                    query += ` AND LOWER(location_desc) LIKE ?`;
+                    queryParams.push(`%${searchLower}%`);
+                } else if (groupBy === 'extension') {
+                    query += ` AND LOWER(ext_phone) LIKE ?`;
+                    queryParams.push(`%${searchLower}%`);
+                } else if (groupBy === 'service') {
+                    query += ` AND LOWER(service_name) LIKE ?`;
+                    queryParams.push(`%${searchLower}%`);
                 }
-                titleCounts[title].count++;
-                if (order.location_desc) titleCounts[title].units.add(order.location_desc);
-                if (titleCounts[title].examples.length < 3) {
-                    titleCounts[title].examples.push({
-                        order_no: order.order_no,
-                        create_date: order.create_date,
-                        status: order.status_desc
+            }
+
+            const [rows]: any = await pool.query(query, queryParams);
+            
+            if (rows.length === 0) {
+                return NextResponse.json({ data: [] });
+            }
+
+            const counts: Record<string, { count: number; items: any[]; label: string }> = {};
+            
+            for (const row of rows) {
+                let key = '';
+                let label = '';
+                
+                if (groupBy === 'extension') {
+                    key = row.ext_phone?.trim() || 'NO_EXT';
+                    label = key === 'NO_EXT' ? 'Tanpa Ekstensi' : `Ext: ${key}`;
+                } else if (groupBy === 'service') {
+                    key = row.service_catalog_id?.toString() || row.service_name?.trim() || 'NO_SERVICE';
+                    label = row.service_name?.trim() || 'Tanpa Layanan';
+                } else {
+                    key = row.location_desc?.trim() || 'NO_LOCATION';
+                    label = key === 'NO_LOCATION' ? 'Tanpa Lokasi' : key;
+                }
+
+                if (!key || key === 'NO_EXT' || key === 'NO_LOCATION' || key === 'NO_SERVICE') continue;
+
+                if (!counts[key]) {
+                    counts[key] = { count: 0, items: [], label };
+                }
+                counts[key].count++;
+                
+                // Format date back to SIMRS view format for UI consistency
+                const date = new Date(row.create_date);
+                const formattedDate = date.toLocaleDateString('id-ID', { 
+                    day: 'numeric', month: 'short', year: '2-digit' 
+                }) + ' - ' + date.toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', minute: '2-digit', hour12: false 
+                }).replace('.', ':');
+
+                if (counts[key].items.length < 5) {
+                    counts[key].items.push({
+                        order_no: row.order_no,
+                        title: row.catatan || `Order ${row.order_no}`,
+                        create_date: formattedDate,
+                        status: row.status_desc
                     });
                 }
             }
 
-            let repeatOrders = Object.entries(titleCounts)
+            let repeatData = Object.entries(counts)
                 .filter(([, v]) => v.count > 1)
-                .map(([title, v]) => ({
-                    title,
+                .map(([key, v]) => ({
+                    key,
+                    label: v.label,
                     count: v.count,
-                    units: Array.from(v.units).join(', '),
-                    examples: v.examples
+                    items: v.items
                 }));
 
-            if (search) {
-                repeatOrders = repeatOrders.filter(ro => ro.title.toLowerCase().includes(search) || ro.units.toLowerCase().includes(search));
-            }
+            if (sort === 'asc') repeatData.sort((a, b) => a.count - b.count);
+            else repeatData.sort((a, b) => b.count - a.count);
 
-            // Re-use sort order parameter, but for this context sort by occurrence ascending or descending
-            if (sort === 'asc') repeatOrders.sort((a, b) => a.count - b.count);
-            else repeatOrders.sort((a, b) => b.count - a.count);
-
-            return NextResponse.json({ data: repeatOrders });
+            return NextResponse.json({ data: repeatData });
         }
 
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });

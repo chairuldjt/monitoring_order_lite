@@ -153,6 +153,32 @@ async function initDatabase() {
     }
 
     // ================================
+    // TABLE: simrs_orders_cache
+    // ================================
+    console.log('📋 Creating table: simrs_orders_cache');
+    await connection.query(`
+        CREATE TABLE IF NOT EXISTS simrs_orders_cache (
+            order_id INT PRIMARY KEY,
+            order_no VARCHAR(50) NOT NULL,
+            create_date DATETIME NOT NULL,
+            order_by VARCHAR(255),
+            location_desc VARCHAR(255),
+            ext_phone VARCHAR(50),
+            catatan TEXT,
+            status_desc VARCHAR(50),
+            status_id INT,
+            service_catalog_id VARCHAR(50),
+            service_name VARCHAR(255),
+            teknisi TEXT,
+            last_synced TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_location (location_desc),
+            INDEX idx_ext (ext_phone),
+            INDEX idx_service (service_catalog_id),
+            INDEX idx_create_date (create_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // ================================
     // CLEANUP: Drop local orders tables (Legacy cleanup, but KEEP notifications)
     // ================================
     console.log('🗑️  Cleaning up legacy local orders data (except notifications)...');

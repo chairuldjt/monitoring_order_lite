@@ -38,11 +38,6 @@ function DashboardContent() {
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // AI Repeat Orders State
-    const [aiRepeatOrders, setAiRepeatOrders] = useState<any[]>([]);
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiStatus, setAiStatus] = useState<'idle' | 'running' | 'success' | 'error' | 'not_set'>('idle');
-
     // Modal state
     const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
@@ -67,37 +62,13 @@ function DashboardContent() {
         }
     }, []);
 
-    const fetchAiAnalysis = useCallback(async (triggerManual = false) => {
-        if (triggerManual) setAiLoading(true);
-        setAiStatus(triggerManual ? 'running' : 'idle');
-        try {
-            // First check if cached data exists
-            const res = await fetch('/api/ai/analyze', { method: triggerManual ? 'POST' : 'GET' });
-            if (res.ok) {
-                const json = await res.json();
-                setAiRepeatOrders(json.data || []);
-                setAiStatus('success');
-            } else if (res.status === 404 && !triggerManual) {
-                setAiStatus('idle'); // Need manual trigger or auto first run
-            } else if (res.status === 400) {
-                setAiStatus('not_set'); // API Key not set
-            } else {
-                setAiStatus('error');
-            }
-        } catch (err) {
-            setAiStatus('error');
-        } finally {
-            setAiLoading(false);
-        }
-    }, []);
 
     useEffect(() => {
         fetchStats();
-        fetchAiAnalysis();
         // Auto-refresh stats every 2 minutes
         const interval = setInterval(() => fetchStats(true), 120000);
         return () => clearInterval(interval);
-    }, [fetchStats, fetchAiAnalysis]);
+    }, [fetchStats]);
 
     if (loading) {
         return (
@@ -342,40 +313,26 @@ function DashboardContent() {
                     </div>
                 </div>
 
-                {/* Repeat Orders (AI Powered) */}
+                {/* Repeat Orders */}
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 relative overflow-hidden h-full flex flex-col">
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-indigo-50 rounded-full blur-2xl"></div>
                     <div className="relative z-10 flex flex-col h-full">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-                                    <Brain className="w-6 h-6 text-white" />
+                                    <Repeat className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-slate-800">Repeat Order AI</h3>
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Deteksi Semantik Gemini</p>
+                                    <h3 className="font-black text-slate-800">Repeat Order</h3>
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Deteksi Frekuensi Layanan</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex-1 flex flex-col h-full min-h-0">
-                            {aiStatus === 'not_set' ? (
-                                <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
-                                    <AlertTriangle className="w-10 h-10 text-amber-500 mb-3" />
-                                    <p className="text-[11px] text-slate-500 font-bold mb-3 uppercase tracking-wider">Fitur AI Belum Siap</p>
-                                    <Link href="/repeat" className="bg-slate-100 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-slate-200 transition-all uppercase tracking-widest">Detail di Repeat Orders</Link>
-                                </div>
-                            ) : aiStatus === 'running' ? (
-                                <div className="flex-1 flex flex-col items-center justify-center py-10">
-                                    <div className="relative mb-4">
-                                        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                                        <Brain className="w-5 h-5 text-indigo-600 absolute inset-0 m-auto" />
-                                    </div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Sedang Menganalisis...</p>
-                                </div>
-                            ) : aiRepeatOrders.length > 0 ? (
+                            {stats?.repeatOrders && stats.repeatOrders.length > 0 ? (
                                 <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar flex-1">
-                                    {aiRepeatOrders.map((item: any, i: number) => (
+                                    {stats.repeatOrders.map((item: any, i: number) => (
                                         <div key={i} className="flex items-center justify-between bg-indigo-50/60 hover:bg-indigo-50 rounded-2xl p-4 border border-indigo-100/50 transition-colors shadow-sm group">
                                             <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
                                                 <span className="shrink-0 w-8 h-8 bg-white border border-indigo-100 shadow-sm rounded-lg flex items-center justify-center text-sm font-black text-indigo-600">
@@ -394,21 +351,8 @@ function DashboardContent() {
                                         </div>
                                     ))}
                                 </div>
-                            ) : aiStatus === 'idle' ? (
-                                <div className="flex-1 flex flex-col items-center justify-center py-10 text-center">
-                                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
-                                        <Brain className="w-6 h-6 text-slate-300" />
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3 leading-relaxed px-4">Data repeat order belum tersedia, silahkan jalankan analisa dengan AI</p>
-                                    <Link
-                                        href="/repeat"
-                                        className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black hover:shadow-lg transition-all uppercase tracking-widest flex items-center gap-2"
-                                    >
-                                        KE REPEAT ORDERS
-                                    </Link>
-                                </div>
                             ) : (
-                                <div className="flex-1 flex flex-col items-center py-6 text-center">
+                                <div className="flex-1 flex flex-col items-center py-6 text-center justify-center">
                                     <span className="text-3xl mb-2">📋</span>
                                     <p className="text-sm text-slate-400 font-medium">Tidak ada repeat order terdeteksi</p>
                                 </div>

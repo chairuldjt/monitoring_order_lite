@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Clock, CheckCircle, AlertTriangle, Info, MapPin, Phone, User, Activity, Image as ImageIcon, X, History } from 'lucide-react';
+import { StatusTimer } from './StatusTimer';
+
 
 interface OrderDetailModalProps {
     orderId: string | number | null;
@@ -47,13 +49,16 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
     }, [orderId]);
 
     const statusColors: Record<string, string> = {
-        open: 'bg-blue-500',
-        follow_up: 'bg-amber-500',
-        running: 'bg-indigo-500',
-        done: 'bg-emerald-500',
-        verified: 'bg-teal-500',
-        pending: 'bg-rose-500',
+        'OPEN': 'bg-blue-500',
+        'FOLLOW UP': 'bg-purple-500',
+        'RUNNING': 'bg-sky-500',
+        'CHECKED': 'bg-sky-500',
+        'DONE': 'bg-emerald-500',
+        'VERIFIED': 'bg-teal-500',
+        'PENDING': 'bg-amber-500',
     };
+
+
 
     if (!orderId) return null;
 
@@ -105,21 +110,22 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
                                                 {order.status_desc || order.status.replace('_', ' ')}
                                             </span>
                                         </div>
+                                        <div className="max-w-xs">
+                                            <StatusTimer createDate={order.create_date} status={order.status} />
+                                        </div>
+
                                         <h1 className="text-xl font-black leading-tight drop-shadow-sm pr-12 line-clamp-2">
                                             {order.catatan || order.description || `Order ${order.order_no}`}
                                         </h1>
                                         <div className="flex flex-wrap items-center gap-4 mt-5 text-slate-400 font-medium text-xs">
                                             <div className="flex items-center gap-1.5">
-                                                <User className="w-3.5 h-3.5 opacity-70" />
-                                                {order.order_by || order.requester_name}
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
                                                 <MapPin className="w-3.5 h-3.5 opacity-70" />
-                                                {order.location_desc || order.requester_unit}
+                                                <span className="font-bold opacity-60 uppercase tracking-tighter mr-1">Nama/Lokasi:</span>
+                                                {order.order_by || order.requester_name ? `${order.order_by || order.requester_name} / ` : ''}{order.location_desc || order.requester_unit || '-'}
                                             </div>
                                             {order.ext_phone && (
                                                 <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/5 text-blue-100">
-                                                    <Phone className="w-3 h-3" />
+                                                    <span className="font-bold opacity-60 uppercase tracking-tighter text-[9px] mr-1">Ext:</span>
                                                     <span className="font-bold uppercase tracking-wide">{order.ext_phone}</span>
                                                 </div>
                                             )}
