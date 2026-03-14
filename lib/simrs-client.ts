@@ -447,8 +447,8 @@ export async function getSIMRSOrdersWithDetails(statusIds: number[]): Promise<SI
                             if ((sDesc === 'DONE' || sDesc === 'VERIFIED') && !dDate) dDate = hDate;
                         });
 
-                        detailedInfo.follow_up_date = (fDate instanceof Date) ? fDate.toISOString() : null;
-                        detailedInfo.done_date = (dDate instanceof Date) ? dDate.toISOString() : null;
+                        detailedInfo.follow_up_date = fDate ? (fDate as any).toISOString() : null;
+                        detailedInfo.done_date = dDate ? (dDate as any).toISOString() : null;
                         cacheManager.set(cacheName, detailedInfo);
                     }
                 }
