@@ -46,6 +46,8 @@ export interface SIMRSOrder {
     service_catalog_id?: number | string;
     teknisi: string;
     service_name?: string;
+    follow_up_date?: string | null;
+    done_date?: string | null;
 }
 
 export interface SIMRSSummary {
@@ -264,7 +266,7 @@ export async function getSIMRSOrderDetail(orderId: number | string): Promise<SIM
         const rawDate = order.create_date || order.created_at || order.status_date || '';
         const parsedDate = parseSIMRSDate(rawDate);
 
-        return {
+        const result: SIMRSOrder = {
             order_id: order.order_id || order.id,
             order_no: order.order_no || '',
             create_date: parsedDate ? formatToStandardDate(parsedDate) : rawDate,
@@ -278,6 +280,10 @@ export async function getSIMRSOrderDetail(orderId: number | string): Promise<SIM
             teknisi: (order.nama_teknisi || order.teknisi || '').replace(/\|$/, '').trim(),
             service_name: order.service_name || order.service || '',
         };
+
+        // If order_by is still empty, we can't easily get it here without history
+        // but we'll let the merge logic handle it
+        return result;
     } catch (error) {
         console.error(`Error fetching order detail ${orderId}:`, error);
         return null;
@@ -422,14 +428,39 @@ export async function getSIMRSOrdersWithDetails(statusIds: number[]): Promise<SI
         const batchResponses = await Promise.all(
             currentBatch.map(async (o) => {
                 const uniqueId = o.order_id;
-                const cacheName = `order_detail_${uniqueId}`;
+                const cacheName = `order_detail_v2_${uniqueId}`; // New cache version for history
                 const cachedData = cacheManager.get(cacheName);
-                if (cachedData) return { ...o, ...cachedData };
+                
+                let detailedInfo: SIMRSOrder | null = cachedData;
+                if (!detailedInfo) {
+                    detailedInfo = await getSIMRSOrderDetail(uniqueId);
+                    if (detailedInfo) {
+                        // Fetch history for dates
+                        const history = await getSIMRSOrderHistory(uniqueId);
+                        let fDate: Date | null = null;
+                        let dDate: Date | null = null;
 
-                const detailedInfo = await getSIMRSOrderDetail(uniqueId);
+                        history.forEach((h: any) => {
+                            const sDesc = (h.status_desc || '').toUpperCase().trim();
+                            const hDate = parseSIMRSDate(h.status_date) || parseSIMRSDate(h.create_date);
+                            if (sDesc === 'FOLLOW UP' && !fDate) fDate = hDate;
+                            if ((sDesc === 'DONE' || sDesc === 'VERIFIED') && !dDate) dDate = hDate;
+                        });
+
+                        detailedInfo.follow_up_date = fDate ? fDate.toISOString() : null;
+                        detailedInfo.done_date = dDate ? dDate.toISOString() : null;
+                        cacheManager.set(cacheName, detailedInfo);
+                    }
+                }
+
                 if (detailedInfo) {
-                    cacheManager.set(cacheName, detailedInfo);
-                    return { ...o, ...detailedInfo };
+                    const merged = { ...o };
+                    (Object.keys(detailedInfo) as Array<keyof SIMRSOrder>).forEach(key => {
+                        if (detailedInfo[key] && detailedInfo[key] !== '') {
+                            (merged as any)[key] = detailedInfo[key];
+                        }
+                    });
+                    return merged;
                 }
                 return o;
             })

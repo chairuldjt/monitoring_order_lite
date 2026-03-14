@@ -3,7 +3,7 @@
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, RefreshCw, Wifi, ChevronDown, X, ArrowUp, ArrowDown, Phone, ArrowRight } from 'lucide-react';
+import { Search, RefreshCw, Wifi, ChevronDown, X, ArrowUp, ArrowDown, Phone, ArrowRight, FileSpreadsheet } from 'lucide-react';
 
 
 import { StatusTimer } from '@/components/StatusTimer';
@@ -42,6 +42,7 @@ function OrdersContent() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [search, setSearch] = useState(initialSearch);
     const [searchType, setSearchType] = useState(initialSearchType);
     const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
@@ -97,6 +98,27 @@ function OrdersContent() {
         fetchOrders();
     }, [fetchOrders]);
 
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const params = new URLSearchParams();
+            if (statusFilter) params.set('status', statusFilter);
+            if (search) params.set('search', search);
+            if (searchType !== 'all') params.set('searchType', searchType);
+            if (startDate) params.set('startDate', startDate);
+            if (endDate) params.set('endDate', endDate);
+            if (nosFilter) params.set('nos', nosFilter);
+            params.set('sort', sortOrder);
+            
+            window.location.href = `/api/orders/export?${params}`;
+        } catch (error) {
+            console.error('Failed to export orders:', error);
+            setError('Gagal mengunduh data order');
+        } finally {
+            setTimeout(() => setExporting(false), 2000);
+        }
+    };
+
     const statuses = [
         { key: '', label: 'Semua' },
         { key: 'open', label: 'Open' },
@@ -145,14 +167,24 @@ function OrdersContent() {
                         <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Live dari SIMRS • {total} order</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => fetchOrders(true)}
-                    disabled={refreshing}
-                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 self-start text-sm"
-                >
-                    <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="bg-white text-emerald-600 border border-emerald-200 px-5 py-2.5 rounded-xl hover:bg-emerald-50 hover:shadow-md transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 text-sm h-11"
+                    >
+                        <FileSpreadsheet className={`w-4 h-4 ${exporting ? 'animate-bounce' : ''}`} />
+                        {exporting ? 'Exporting...' : 'Export Excel'}
+                    </button>
+                    <button
+                        onClick={() => fetchOrders(true)}
+                        disabled={refreshing}
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 text-sm h-11"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Error */}

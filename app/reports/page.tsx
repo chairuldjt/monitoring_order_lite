@@ -3,14 +3,15 @@
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useEffect, useState, useCallback } from 'react';
 import { 
-    BarChart3, PieChart, TrendingUp, Calendar, 
+    BarChart3, PieChart, TrendingUp, 
     ArrowLeft, RefreshCw, LayoutGrid, MapPin, 
-    ClipboardList, CheckCircle, Clock, AlertCircle 
+    ClipboardList, CheckCircle, Clock,
+    FileSpreadsheet
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-    PieChart as RePieChart, Pie, Cell, LineChart, Line, AreaChart, Area 
+    PieChart as RePieChart, Pie, Cell, AreaChart, Area 
 } from 'recharts';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
@@ -26,6 +27,7 @@ export default function ReportsPage() {
 function ReportsContent() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [syncResult, setSyncResult] = useState<{ message: string; count: number } | null>(null);
@@ -40,6 +42,26 @@ function ReportsContent() {
         const d = Math.floor(hours / 24);
         const h = Math.round(hours % 24);
         return h > 0 ? `${d}d ${h}h` : `${d}d`;
+    };
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const params = new URLSearchParams();
+            if (startDate && endDate) {
+                params.set('startDate', startDate);
+                params.set('endDate', endDate);
+            } else {
+                params.set('days', days);
+            }
+            
+            window.location.href = `/api/reports/export?${params}`;
+        } catch (error) {
+            console.error('Failed to export:', error);
+            setError('Gagal mengunduh laporan');
+        } finally {
+            setTimeout(() => setExporting(false), 2000);
+        }
     };
 
     const fetchStats = useCallback(async () => {
@@ -165,6 +187,15 @@ function ReportsContent() {
                     >
                         <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                         {syncing ? 'Syncing...' : 'Sync SIMRS'}
+                    </button>
+
+                    <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 hover:shadow-lg transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 text-sm h-11"
+                    >
+                        <FileSpreadsheet className={`w-4 h-4 ${exporting ? 'animate-pulse' : ''}`} />
+                        {exporting ? 'Exporting...' : 'Excel Report'}
                     </button>
 
                     <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm flex-wrap">

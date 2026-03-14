@@ -26,7 +26,7 @@ export async function POST(request: Request) {
             // We use UPSERT (INSERT ... ON DUPLICATE KEY UPDATE)
             const query = `
                 INSERT INTO simrs_orders_cache 
-                (order_id, order_no, create_date, order_by, location_desc, ext_phone, catatan, status_desc, status_id, service_catalog_id, service_name, teknisi)
+                (order_id, order_no, create_date, order_by, location_desc, ext_phone, catatan, status_desc, status_id, service_catalog_id, service_name, teknisi, follow_up_date, done_date)
                 VALUES ?
                 ON DUPLICATE KEY UPDATE
                 order_no = VALUES(order_no),
@@ -40,6 +40,8 @@ export async function POST(request: Request) {
                 service_catalog_id = VALUES(service_catalog_id),
                 service_name = VALUES(service_name),
                 teknisi = VALUES(teknisi),
+                follow_up_date = VALUES(follow_up_date),
+                done_date = VALUES(done_date),
                 last_synced = CURRENT_TIMESTAMP
             `;
 
@@ -48,6 +50,9 @@ export async function POST(request: Request) {
                 // Convert to MySQL DATETIME format (YYYY-MM-DD HH:MM:SS)
                 const mysqlDate = parsedDate ? parsedDate.toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
                 
+                const fDate = o.follow_up_date ? new Date(o.follow_up_date).toISOString().slice(0, 19).replace('T', ' ') : null;
+                const dDate = o.done_date ? new Date(o.done_date).toISOString().slice(0, 19).replace('T', ' ') : null;
+
                 return [
                     o.order_id,
                     o.order_no,
@@ -60,7 +65,9 @@ export async function POST(request: Request) {
                     o.status_id,
                     o.service_catalog_id?.toString(),
                     o.service_name,
-                    o.teknisi
+                    o.teknisi,
+                    fDate,
+                    dDate
                 ];
             });
 

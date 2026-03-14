@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPayloadFromCookie } from '@/lib/jwt';
 import pool from '@/lib/db';
-import fs from 'fs';
-import path from 'path';
-
-const CACHE_FILE_PATH = path.join(process.cwd(), 'data', 'analytics_cache.json');
 
 export async function GET(request: Request) {
     try {
@@ -76,72 +72,21 @@ export async function GET(request: Request) {
             FROM simrs_orders_cache
         `), queryParams);
 
-        // 6. Calculate Average Completion Time
+        // 6. Calculate Average Completion Time from Database
         let averageCompletionTime = 0;
         try {
-            if (fs.existsSync(CACHE_FILE_PATH)) {
-                const fileContent = fs.readFileSync(CACHE_FILE_PATH, 'utf8');
-                const rawData = JSON.parse(fileContent);
-                
-                let totalHours = 0;
-                let validCount = 0;
+            const [avgRows]: any = await pool.query(getQuery(`
+                SELECT AVG(TIMESTAMPDIFF(SECOND, follow_up_date, done_date)) / 3600 as avg_hours
+                FROM simrs_orders_cache
+                WHERE follow_up_date IS NOT NULL AND done_date IS NOT NULL 
+                AND done_date >= follow_up_date
+            `), queryParams);
 
-                const parseDate = (dateStr: string) => {
-                    if (!dateStr) return null;
-                    const d = new Date(dateStr);
-                    return isNaN(d.getTime()) ? null : d;
-                };
-
-                let cutoffDate: Date | null = null;
-                let startLimit: Date | null = null;
-                let endLimit: Date | null = null;
-
-                if (startDate && endDate) {
-                    startLimit = new Date(startDate + ' 00:00:00');
-                    endLimit = new Date(endDate + ' 23:59:59');
-                } else if (days && days !== 'all') {
-                    cutoffDate = new Date();
-                    cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
-                }
-
-                rawData.forEach((item: any) => {
-                    if (!item.history || !Array.isArray(item.history)) return;
-                    
-                    const orderDate = parseDate(item.order.create_date);
-                    if (!orderDate) return;
-
-                    if (startLimit && endLimit) {
-                        if (orderDate < startLimit || orderDate > endLimit) return;
-                    } else if (cutoffDate) {
-                        if (orderDate < cutoffDate) return;
-                    }
-
-                    let followUpDate: Date | null = null;
-                    let doneDate: Date | null = null;
-
-                    item.history.forEach((h: any) => {
-                        const statusName = (h.status_desc || '').toUpperCase().trim();
-                        let hDate = parseDate(h.status_date) || parseDate(h.create_date);
-
-                        if (statusName === 'FOLLOW UP' && !followUpDate) followUpDate = hDate;
-                        if ((statusName === 'DONE' || statusName === 'VERIFIED') && hDate) doneDate = hDate;
-                    });
-
-                    if (followUpDate && doneDate) {
-                        const diff = ((doneDate as any).getTime() - (followUpDate as any).getTime()) / (1000 * 60 * 60);
-                        if (diff >= 0) {
-                            totalHours += diff;
-                            validCount++;
-                        }
-                    }
-                });
-
-                if (validCount > 0) {
-                    averageCompletionTime = Number((totalHours / validCount).toFixed(1));
-                }
+            if (avgRows[0] && avgRows[0].avg_hours) {
+                averageCompletionTime = Number(parseFloat(avgRows[0].avg_hours).toFixed(1));
             }
         } catch (e) {
-            console.error('Error calculating avg completion time:', e);
+            console.error('Error calculating avg completion time from SQL:', e);
         }
 
         return NextResponse.json({
@@ -161,3 +106,4 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
