@@ -26,7 +26,7 @@ export default function SettingsPage() {
                             <Settings className="w-8 h-8 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Setting</h1>
+                            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Pengaturan</h1>
                             <p className="text-slate-500 font-medium mt-1 uppercase tracking-[0.2em] text-[10px] font-black opacity-60">
                                 Konfigurasi Sistem & Manajemen Akses
                             </p>

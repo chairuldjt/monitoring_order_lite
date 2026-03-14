@@ -147,7 +147,7 @@ function RepeatOrdersContent() {
                             <Repeat className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-slate-800">Repeat Orders</h1>
+                            <h1 className="text-2xl font-black text-slate-800">Order Berulang</h1>
                             <div className="flex items-center gap-2 mt-0.5">
                                 <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{orders.length} kelompok masalah berulang (Data Lokal)</p>
@@ -162,7 +162,7 @@ function RepeatOrdersContent() {
                                 <Clock className="w-4 h-4 text-indigo-500" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Last Update</span>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Update Terakhir</span>
                                 <span className="text-[11px] font-black text-slate-700 whitespace-nowrap">{formatLastSync(lastSync)}</span>
                             </div>
                         </div>
@@ -173,7 +173,7 @@ function RepeatOrdersContent() {
                         className="bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 text-sm"
                     >
                         <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                        {syncing ? 'Syncing...' : 'Sync SIMRS'}
+                        {syncing ? 'Menyinkronkan...' : 'Sinkron SIMRS'}
                     </button>
                     <button
                         onClick={() => fetchOrders(true)}
@@ -181,7 +181,7 @@ function RepeatOrdersContent() {
                         className="bg-white text-slate-800 border border-slate-200 px-5 py-2.5 rounded-xl hover:shadow-md transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 text-sm"
                     >
                         <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                        Refresh
+                        Segarkan
                     </button>
                 </div>
             </div>

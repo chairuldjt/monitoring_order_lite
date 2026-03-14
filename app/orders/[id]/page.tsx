@@ -2,14 +2,27 @@
 
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useEffect, useState, use } from 'react';
+
 import {
     User, Phone, MapPin, Clock, Calendar,
     ChevronLeft, Activity,
     ClipboardList, CheckCircle2, AlertTriangle,
-    History, Info, ShieldCheck, Camera, ExternalLink, Loader2
+    History, Info, ShieldCheck, Camera, ExternalLink, Loader2,
+    Copy
 } from 'lucide-react';
 import Link from 'next/link';
 import { StatusTimer } from '@/components/StatusTimer';
+import { toast } from 'sonner';
+
+const statusColors: Record<string, string> = {
+    'OPEN': 'bg-blue-500',
+    'FOLLOW UP': 'bg-purple-500',
+    'RUNNING': 'bg-sky-500',
+    'CHECKED': 'bg-sky-500',
+    'DONE': 'bg-emerald-500',
+    'VERIFIED': 'bg-teal-500',
+    'PENDING': 'bg-amber-500',
+};
 
 interface OrderDetail {
     order_id: number;
@@ -44,23 +57,45 @@ function OrderDetailContent({ id }: { id: string }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchOrder = async () => {
-            setLoading(true);
-            try {
-                const res = await fetch(`/api/orders/${id}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setOrder(data.data);
-                } else {
-                    setError('Order tidak ditemukan');
-                }
-            } catch (err) {
-                setError('Gagal memuat data dari server');
-            } finally {
-                setLoading(false);
+    const fetchOrder = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/orders/${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setOrder(data.data);
+            } else {
+                setError('Order tidak ditemukan');
             }
-        };
+        } catch (err) {
+            setError('Gagal memuat data dari server');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const copyToClipboard = () => {
+        if (!order) return;
+        
+        const technicians = (order.teknisi || '').split('|').map(t => t.trim()).filter(Boolean).join(', ');
+        const isMaintenance = (order.service_name || '').toUpperCase().includes('MAINTENANCE') ? 'Ya' : 'Tidak';
+        
+        const text = `No.Order  : ${order.order_no}
+Tgl.Order : ${order.create_date}
+Service   : ${order.service_name || '-'}
+Lokasi    : ${order.order_by ? order.order_by + ' - ' : ''}${order.location_desc || '-'}
+Ext Telp  : ${order.ext_phone || '-'}
+Catatan   : ${order.catatan || order.description || '-'}
+Petugas   : ${technicians || '-'}
+Status    : ${(order.status_desc || order.status || '-').toUpperCase()}
+Photos    : ${order.photos?.length || 0}
+Maintenance: ${isMaintenance}`;
+
+        navigator.clipboard.writeText(text);
+        toast.success('Informasi order berhasil disalin!');
+    };
+
+    useEffect(() => {
         fetchOrder();
     }, [id]);
 
@@ -98,192 +133,232 @@ function OrderDetailContent({ id }: { id: string }) {
     const st = (order.status || '').toUpperCase().trim().replace(/[\s\.\-]+/g, '_');
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Link
-                        href="/orders"
-                        className="w-10 h-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all opacity-80 hover:opacity-100"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-slate-600" />
-                    </Link>
-                    <div>
-                        <h1 className="text-xl font-black text-slate-800 tracking-tight">Detail Order #{order.order_no}</h1>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Manajemen Monitoring Order SIMRS</p>
-                    </div>
-                </div>
-                {/* Status Timer Header */}
-                <div className="mt-2 md:mt-0">
-                    <StatusTimer createDate={order.create_date} status={order.status} />
-                </div>
-            </div>
-
-            {/* Layout Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
-                {/* Column Left (Customer Info) */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-                        <div className="p-6 md:p-8 space-y-8">
-                            <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                                <User className="w-4 h-4 text-violet-500" />
-                                Informasi Order
-                            </h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No. Extension</p>
-                                    <p className="text-sm font-black text-slate-700">{order.ext_phone || '-'}</p>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Teknisi</p>
-                                    <p className="text-sm font-black text-blue-600 uppercase tracking-wide">{order.teknisi || 'Belum Ditentukan'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Layanan (Service)</p>
-                                    <p className="text-sm font-black text-indigo-600 uppercase tracking-wide">{order.service_name || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nama / Lokasi</p>
-                                    <p className="text-sm font-black text-slate-700 uppercase tracking-wide">
-                                        {order.order_by ? `${order.order_by} / ` : ''}{order.location_desc || '-'}
-                                    </p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tanggal Order</p>
-                                    <p className="text-sm font-black text-slate-700 uppercase tracking-wide">{order.create_date}</p>
-                                </div>
-                            </div>
-
-                            <div className="pt-8 border-t border-slate-50">
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Catatan Pelapor / SIMRS</p>
-                                    <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-100">
-                                        <p className="text-xs text-slate-600 font-medium leading-relaxed italic">
-                                            "{order.catatan || 'Tidak ada catatan tambahan yang tersedia.'}"
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Column Right (Waktu) */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 transition-all hover:shadow-md">
-                        <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-slate-400" />
-                            Waktu Order
-                        </h3>
-                        <div className="space-y-5">
-                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Masuk</span>
-                                <span className="text-[11px] font-black text-slate-700">{order.create_date}</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selesai</span>
-                                <span className="text-[11px] font-black text-slate-700">
-                                    {(order.history?.find((h: any) => h.status === 'done' || h.status_desc?.toUpperCase() === 'DONE')?.created_at) || '-'}
+        <div className="min-h-screen bg-[#F1F5F9] relative flex flex-col font-sans">
+            <div className="relative z-10 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-5 animate-fade-in pb-20">
+                {/* Header Section */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/orders"
+                            className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all text-slate-600"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </Link>
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Order #{order.order_no}</h1>
+                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${statusColors[order.status?.toUpperCase()] || 'bg-slate-600'} text-white shadow-sm`}>
+                                    {order.status_desc || order.status?.replace('_', ' ')}
                                 </span>
                             </div>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest flex items-center gap-2 mt-0.5">
+                                <Activity className="w-3.5 h-3.5 text-indigo-500" />
+                                Sistem Pantauan Order
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center gap-3">
+                        <button 
+                            onClick={copyToClipboard}
+                            className="bg-slate-50 text-slate-500 border border-slate-200 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 hover:text-slate-700 transition-all flex items-center gap-2 active:scale-95"
+                        >
+                            <Copy className="w-3.5 h-3.5" />
+                            Salin Order
+                        </button>
+                        <div className="flex flex-col md:items-end">
+                            <StatusTimer createDate={order.create_date} status={order.status} />
                         </div>
                     </div>
                 </div>
 
-                {/* Timeline Status */}
-                <div className="lg:col-span-3">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 transition-all hover:shadow-md">
-                        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest mb-12">Progres Order</h3>
-                        <div className="relative flex items-center justify-between px-10 pb-4 overflow-x-auto no-scrollbar min-w-[600px]">
-                            <div className="absolute left-20 right-20 top-5 h-1 bg-slate-50"></div>
-
-                            {[
-                                { id: 'OPEN', label: 'Open', icon: ClipboardList, internalStatuses: ['OPEN'] },
-                                { id: 'FOLLOW_UP', label: 'Follow Up', icon: MapPin, internalStatuses: ['FOLLOW_UP'] },
-                                { id: 'RUNNING', label: 'Running', icon: Activity, internalStatuses: ['RUNNING', 'CHECKED', 'PENDING'] },
-                                { id: 'DONE', label: 'Done', icon: CheckCircle2, internalStatuses: ['DONE'] },
-                                { id: 'VERIFIED', label: 'Verified', icon: ShieldCheck, internalStatuses: ['VERIFIED'] },
-                            ].map((step, idx) => {
-                                const activeHierarchy = ['OPEN', 'FOLLOW_UP', 'RUNNING', 'CHECKED', 'PENDING', 'DONE', 'VERIFIED'];
-                                const currentIndex = activeHierarchy.indexOf(st);
-
-                                const isActive = step.internalStatuses.includes(st);
-
-                                // Logic for completion: if current status is after the highest possible internal status for this step
-                                const maxStepRank = Math.max(...step.internalStatuses.map(s => activeHierarchy.indexOf(s)));
-                                const isCompleted = currentIndex > maxStepRank;
-
-                                const isHighlight = isActive || isCompleted;
-
-                                return (
-                                    <div key={idx} className="relative flex flex-col items-center gap-4 z-10 bg-white px-2">
-                                        <div className={`w-11 h-11 rounded-full border-4 border-white flex items-center justify-center shadow-md transition-all duration-500 ${isActive ? 'bg-blue-600 scale-125 ring-4 ring-blue-50' : isCompleted ? 'bg-emerald-500' : 'bg-slate-50'}`}>
-                                            <step.icon className={`w-4 h-4 ${isHighlight ? 'text-white' : 'text-slate-300'}`} />
-                                        </div>
-                                        <div className="flex flex-col items-center gap-1">
-                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-blue-600' : isCompleted ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                {step.label}
-                                            </p>
-                                            {isActive && st === 'PENDING' && (
-                                                <span className="text-[8px] font-black bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">On Hold</span>
-                                            )}
-                                            {isActive && st === 'CHECKED' && (
-                                                <span className="text-[8px] font-black bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Dikerjakan</span>
-                                            )}
+                {/* Main Content Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    
+                    {/* Left Panel: Primary Info (8 cols) */}
+                    <div className="lg:col-span-8 space-y-5">
+                        
+                        {/* Summary Header Card */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                            <div className="bg-slate-50 border-b border-slate-100 px-6 py-3 flex items-center gap-2">
+                                <Info className="w-4 h-4 text-indigo-500" />
+                                <h2 className="text-xs font-black uppercase tracking-widest text-slate-700">Informasi Utama</h2>
+                            </div>
+                            
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teknisi</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                                <User className="w-4 h-4 text-indigo-500" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-800 uppercase">{order.teknisi || '-'}</p>
                                         </div>
                                     </div>
-                                );
-                            })}
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Layanan</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                                <Activity className="w-4 h-4 text-emerald-500" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-800 uppercase">{order.service_name || '-'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama / Lokasi</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-lg bg-fuchsia-50 flex items-center justify-center">
+                                                <MapPin className="w-4 h-4 text-fuchsia-500" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-800 uppercase">
+                                                {order.order_by ? `${order.order_by} / ` : ''}{order.location_desc || '-'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ekstensi</p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                                                <Phone className="w-4 h-4 text-amber-500" />
+                                            </div>
+                                            <p className="text-sm font-black text-slate-800 tracking-wider">{(order.ext_phone || '-').toUpperCase()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                        <ClipboardList className="w-3 h-3" />
+                                        Catatan SIMRS
+                                    </p>
+                                    <p className="text-sm text-slate-600 font-medium leading-relaxed italic">
+                                        "{order.catatan || order.description || 'Tidak ada catatan tambahan.'}"
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* History */}
-                        <div className="mt-14 pt-10 border-t border-slate-50">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2"><History className="w-4 h-4" />Riwayat Pembaruan Terakhir</h4>
-                            <div className="space-y-8 ml-4">
-                                {order.history && order.history.length > 0 ? (
-                                    order.history.map((h: any, i: number) => (
-                                        <div key={i} className="flex gap-6 relative">
-                                            {i !== order.history.length - 1 && <div className="absolute left-1.5 top-4 bottom-[-32px] w-0.5 bg-slate-50"></div>}
-                                            <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 z-10 border-2 border-white shadow-sm ${i === 0 ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
-                                            <div className="space-y-1">
-                                                <div className="flex flex-wrap items-center gap-3">
-                                                    <p className={`text-xs font-black uppercase tracking-wide ${i === 0 ? 'text-blue-700' : 'text-slate-700'}`}>{h.status_desc || h.status}</p>
-                                                    <span className="text-[10px] font-bold text-slate-400 lowercase italic">oleh {h.changed_by_name} • {h.created_at}</span>
-                                                </div>
-                                                <p className="text-[11px] text-slate-500 mt-1 font-medium leading-relaxed max-w-2xl bg-slate-50/50 p-2 rounded-lg border border-slate-100/50">"{h.note || 'Status diperbarui oleh sistem.'}"</p>
+                        {/* Progress Timeline Section */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                            <div className="flex items-center gap-2 mb-8">
+                                <Activity className="w-4 h-4 text-indigo-500" />
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Progres Update</h3>
+                            </div>
+                            
+                            <div className="relative flex items-center justify-between px-2 pb-6 overflow-x-auto no-scrollbar min-w-[500px]">
+                                <div className="absolute left-10 right-10 top-4 h-[2px] bg-slate-100 rounded-full"></div>
+
+                                {[
+                                    { id: 'OPEN', label: 'Open', icon: ClipboardList, internalStatuses: ['OPEN'] },
+                                    { id: 'FOLLOW_UP', label: 'Follow Up', icon: User, internalStatuses: ['FOLLOW_UP'] },
+                                    { id: 'RUNNING', label: 'Running', icon: Activity, internalStatuses: ['RUNNING', 'CHECKED', 'PENDING'] },
+                                    { id: 'DONE', label: 'Done', icon: CheckCircle2, internalStatuses: ['DONE'] },
+                                    { id: 'VERIFIED', label: 'Verified', icon: ShieldCheck, internalStatuses: ['VERIFIED'] },
+                                ].map((step, idx) => {
+                                    const activeHierarchy = ['OPEN', 'FOLLOW_UP', 'RUNNING', 'CHECKED', 'PENDING', 'DONE', 'VERIFIED'];
+                                    const currentIndex = activeHierarchy.indexOf(st);
+                                    const isActive = step.internalStatuses.includes(st);
+                                    const maxStepRank = Math.max(...step.internalStatuses.map(s => activeHierarchy.indexOf(s)));
+                                    const isCompleted = currentIndex > maxStepRank;
+                                    const isHighlight = isActive || isCompleted;
+
+                                    return (
+                                        <div key={idx} className="relative flex flex-col items-center gap-3 z-10">
+                                            <div className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center shadow-sm transition-all duration-300 ${isActive ? 'bg-indigo-600 scale-125 shadow-indigo-200' : isCompleted ? 'bg-emerald-500 shadow-emerald-100' : 'bg-slate-100 text-slate-400'}`}>
+                                                <step.icon className={`w-3.5 h-3.5 ${isHighlight ? 'text-white' : 'text-slate-400'}`} />
                                             </div>
+                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-indigo-600' : isCompleted ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                {step.label}
+                                            </p>
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="flex flex-col items-center py-6 text-slate-300"><Info className="w-8 h-8 mb-2 opacity-20" /><p className="text-[10px] font-black uppercase tracking-widest italic">Belum ada riwayat aktivitas</p></div>
-                                )}
+                                    );
+                                })}
+                            </div>
+
+                            {/* Detailed History Log */}
+                            <div className="mt-6 pt-6 border-t border-slate-50">
+                                <div className="space-y-5">
+                                    {order.history && order.history.length > 0 ? (
+                                        order.history.map((h: any, i: number) => (
+                                            <div key={i} className="flex gap-4 relative items-start">
+                                                {i !== order.history.length - 1 && <div className="absolute left-[5px] top-4 bottom-[-20px] w-[1px] bg-slate-100"></div>}
+                                                <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 z-10 border-2 border-white shadow-sm ${i === 0 ? 'bg-indigo-500 ring-2 ring-indigo-50' : 'bg-slate-300'}`}></div>
+                                                <div className="flex-1 space-y-1.5">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shadow-sm ${i === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                            {h.status_desc || h.status}
+                                                        </span>
+                                                        <span className="text-xs font-bold text-slate-400">
+                                                            Pembaruan oleh <span className="text-slate-700">{h.changed_by_name}</span> • {h.created_at}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 italic">"{h.note || 'Pembaruan otomatis.'}"</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex flex-col items-center py-8 text-slate-300">
+                                            <History className="w-8 h-8 mb-2 opacity-20" />
+                                            <p className="text-xs font-bold uppercase tracking-widest">Belum ada riwayat update</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Documentation Section */}
-                <div className="lg:col-span-3 pb-10">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-                        <div className="p-6 md:p-8 space-y-6">
-                            <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><Camera className="w-4 h-4 text-emerald-500" />Lampiran Foto Dokumentasi</h2>
+                    {/* Right Panel: Side Data (4 cols) */}
+                    <div className="lg:col-span-4 space-y-5">
+                        
+                        {/* Waktu Metrics Card */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-slate-400" />
+                                Informasi Waktu
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex flex-col gap-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waktu Masuk</span>
+                                    <span className="text-sm font-bold text-slate-800">{order.create_date}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/50 text-emerald-900">
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Waktu Selesai</span>
+                                    <span className={`text-sm font-black ${order.tgl_selesai ? 'text-emerald-700' : 'text-emerald-300 italic'}`}>
+                                        {order.tgl_selesai || 'BELUM TERSEDIA'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Dokumentasi Layout Simplifed */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                    <Camera className="w-4 h-4 text-slate-400" />
+                                    Dokumentasi
+                                </h3>
+                                {order.photos && order.photos.length > 0 && (
+                                    <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                                        {order.photos.length} Foto
+                                    </span>
+                                )}
+                            </div>
+                            
                             {order.photos && order.photos.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                                <div className="grid grid-cols-2 gap-3">
                                     {order.photos.map((photo, idx) => (
-                                        <div key={idx} className="group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 shadow-sm transition-all hover:scale-105 hover:shadow-lg">
-                                            <img src={photo.image_url || photo.url} alt={`Lampiran ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3">
-                                                <a href={photo.image_url || photo.url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white/90 backdrop-blur rounded-full shadow-lg"><ExternalLink className="w-4 h-4 text-slate-900" /></a>
-                                            </div>
+                                        <div key={idx} className="group relative aspect-square bg-slate-50 rounded-xl overflow-hidden border border-slate-200 p-1 transition-all hover:scale-105 active:scale-95">
+                                            <img src={photo.image_url || photo.url} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                                            <a href={photo.image_url || photo.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10"></a>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center py-12 bg-slate-50/30 rounded-3xl border-2 border-dashed border-slate-100"><Camera className="w-10 h-10 text-slate-200 mb-2" /><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Tidak ada foto dokumentasi<br />untuk order ini.</p></div>
+                                <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-400">
+                                    <Camera className="w-8 h-8 opacity-20 mb-2" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Tidak ada dokumentasi</p>
+                                </div>
                             )}
                         </div>
                     </div>

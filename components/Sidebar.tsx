@@ -18,13 +18,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     const menuItems = [
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'Orders', path: '/orders', icon: ClipboardList },
+        { name: 'Daftar Order', path: '/orders', icon: ClipboardList },
         { name: 'Over Follow Up', path: '/overdue', icon: AlertTriangle },
         { name: 'Over Pending', path: '/pending', icon: Clock },
-        { name: 'Repeat Orders', path: '/repeat', icon: Repeat },
-        { name: 'Tech Breakdown', path: '/breakdown', icon: Users },
-        { name: 'Reports', path: '/reports', icon: BarChart2 },
-        { name: 'Setting', path: '/settings', icon: Settings },
+        { name: 'Order Berulang', path: '/repeat', icon: Repeat },
+        { name: 'Beban Teknisi', path: '/breakdown', icon: Users },
+        { name: 'Laporan', path: '/reports', icon: BarChart2 },
+        { name: 'Pengaturan', path: '/settings', icon: Settings },
     ];
 
     const isActive = (path: string) => {
@@ -73,7 +73,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {/* Navigation Section */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
                     <p className="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">
-                        Main Menu
+                        Menu Utama
                     </p>
                     {menuItems.map((item) => {
                         const Icon = item.icon;

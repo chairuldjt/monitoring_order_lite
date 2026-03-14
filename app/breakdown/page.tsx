@@ -88,10 +88,10 @@ export default function TechnicianBreakdownPage() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-black text-slate-800">
-                            Technician Breakdown
+                            Beban Kerja Teknisi
                         </h1>
                         <p className="text-slate-500 font-medium mt-1 flex items-center gap-2">
-                            Performance analysis from EServiceDesk
+                            Analisis performa dari EServiceDesk
                         </p>
                     </div>
                 </div>
@@ -115,7 +115,7 @@ export default function TechnicianBreakdownPage() {
                             }`}
                     >
                         <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                        {isRefreshing ? 'Menyegarkan...' : 'Segarkan'}
                     </button>
                 </div>
             </div>
@@ -131,7 +131,7 @@ export default function TechnicianBreakdownPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gradient-to-br from-violet-600 to-indigo-700 p-8 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 -mr-8 -mt-8 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <p className="text-violet-100 font-bold tracking-wider uppercase text-xs">Total Orders Today</p>
+                    <p className="text-violet-100 font-bold tracking-wider uppercase text-xs">Total Order Hari Ini</p>
                     <div className="mt-4 flex items-end gap-3">
                         <h2 className="text-6xl font-black italic tracking-tighter">
                             {loading ? '...' : data?.total_orders || 0}
@@ -145,7 +145,7 @@ export default function TechnicianBreakdownPage() {
 
                 <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-8 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 -mr-8 -mt-8 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-500"></div>
-                    <p className="text-emerald-100 font-bold tracking-wider uppercase text-xs">Technicians On Duty</p>
+                    <p className="text-emerald-100 font-bold tracking-wider uppercase text-xs">Teknisi Bertugas</p>
                     <div className="mt-4 flex items-end gap-3">
                         <h2 className="text-6xl font-black italic tracking-tighter">
                             {loading ? '...' : data?.total_teknisi || 0}
@@ -218,17 +218,17 @@ export default function TechnicianBreakdownPage() {
                 {/* Table */}
                 <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
                     <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                        <h3 className="text-xl font-black text-slate-800 tracking-tight">Detailed Breakdown</h3>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{data?.data?.length || 0} Technicians Total</span>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight">Rincian Performa</h3>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total {data?.data?.length || 0} Teknisi</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-slate-50/50">
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Technician</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Orders</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-1/3">Activity</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Status Control</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Teknisi</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Order</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-1/3">Aktivitas</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Kontrol Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -287,7 +287,7 @@ export default function TechnicianBreakdownPage() {
                                                     <div className={`text-[9px] font-black px-4 py-2 rounded-xl border-2 tracking-[0.1em] inline-block ${item.isOff
                                                         ? 'bg-rose-50 text-rose-600 border-rose-200'
                                                         : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
-                                                        {item.isOff ? 'INACTIVE' : 'ACTIVE'}
+                                                        {item.isOff ? 'NONAKTIF' : 'AKTIF'}
                                                     </div>
                                                 </td>
                                             </tr>

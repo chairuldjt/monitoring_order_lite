@@ -179,7 +179,7 @@ function DashboardContent() {
 
                         <div className="flex items-baseline gap-1.5 mb-4">
                             <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-violet-800 tabular-nums tracking-tighter">{stats?.totalOrders || 0}</span>
-                            <span className="text-xs font-black text-violet-400 uppercase tracking-widest">Orders</span>
+                            <span className="text-xs font-black text-violet-400 uppercase tracking-widest">Order</span>
                         </div>
 
                         <div className="space-y-4 flex-1">
@@ -217,7 +217,7 @@ function DashboardContent() {
                             <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
                                 <Repeat className="w-4 h-4 text-white" />
                             </div>
-                            <h3 className="font-black text-slate-800 text-sm tracking-tight">Repeat Order</h3>
+                            <h3 className="font-black text-slate-800 text-sm tracking-tight">Order Berulang</h3>
                         </div>
 
                         <div className="flex-1 min-h-0">
@@ -235,14 +235,14 @@ function DashboardContent() {
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">No repeat issues</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Tidak ada masalah berulang</p>
                                 </div>
                             )}
                         </div>
 
                         <div className="mt-4 pt-3 border-t border-slate-50">
                             <Link href="/repeat" className="text-[10px] font-black text-indigo-600 flex items-center gap-1 uppercase tracking-widest hover:translate-x-1 transition-transform">
-                                Full Analysis <ArrowRight className="w-3 h-3" />
+                                Analisis Lengkap <ArrowRight className="w-3 h-3" />
                             </Link>
                         </div>
                     </div>
@@ -277,7 +277,7 @@ function DashboardContent() {
                                     <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mb-2">
                                         <CheckCircle className="w-5 h-5 text-emerald-500" />
                                     </div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">All updated</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Semua Terupdate</p>
                                 </div>
                             )}
                         </div>
@@ -319,7 +319,7 @@ function DashboardContent() {
                                     <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mb-2">
                                         <CheckCircle className="w-5 h-5 text-emerald-500" />
                                     </div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">No blockers</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Tidak Ada Hambatan</p>
                                 </div>
                             )}
                         </div>
@@ -347,19 +347,54 @@ function DashboardContent() {
 
             {/* Recent Orders */}
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl overflow-hidden">
-                <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
-                        <span className="text-2xl">📋</span> Order Terbaru
+                <div className="px-6 md:px-8 py-5 md:py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h2 className="text-lg md:text-xl font-black text-slate-800 flex items-center gap-3">
+                        <span className="text-xl md:text-2xl">📋</span> Order Terbaru
                     </h2>
                     <Link
                         href="/orders"
-                        className="text-blue-600 hover:text-blue-700 font-black text-sm flex items-center gap-2 hover:gap-3 transition-all"
+                        className="text-blue-600 hover:text-blue-700 font-black text-[10px] md:text-sm flex items-center gap-1.5 md:gap-2 hover:gap-3 transition-all uppercase tracking-widest"
                     >
-                        Lihat Semua <ArrowRight className="w-4 h-4" />
+                        Lihat Semua <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Mobile Card View (Hidden on Desktop) */}
+                <div className="block md:hidden border-t border-slate-50">
+                    <div className="divide-y divide-slate-50 px-4">
+                        {stats?.recentOrders && stats.recentOrders.length > 0 ? (
+                            stats.recentOrders.map((order: any, i: number) => (
+                                <div 
+                                    key={i} 
+                                    onClick={() => setSelectedOrderId(order.order_id)}
+                                    className="py-4 space-y-3 active:bg-slate-50 transition-colors"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <span className="text-xs font-black text-blue-600">#{order.order_no}</span>
+                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border ${getStatusColor(order.status)} uppercase tracking-tighter`}>
+                                            {order.status}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug">{order.title}</p>
+                                        <div className="flex flex-col gap-1 mt-2">
+                                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                                                <Users className="w-3 h-3 text-slate-400" />
+                                                <span className="truncate">{order.requester_name} • {order.requester_unit}</span>
+                                            </div>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{order.create_date}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-12 text-center text-slate-400 italic text-sm">Belum ada data</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Desktop Table View (Hidden on Mobile) */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-slate-50/50">
                             <tr>
@@ -527,8 +562,8 @@ function TechnicianBreakdownWidget() {
                         <Users className="w-6 h-6 text-indigo-500" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-slate-800 tracking-tight">Technician Performance</h3>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Live Breakdown</p>
+                        <h3 className="text-lg font-black text-slate-800 tracking-tight">Performa Teknisi</h3>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Analisis Secara Langsung</p>
                     </div>
                 </div>
                 <Link href="/breakdown" className="text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 transition-colors group/link">
@@ -542,9 +577,9 @@ function TechnicianBreakdownWidget() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-slate-50">
-                                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Technician Name</th>
-                                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Orders Handled</th>
-                                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Progress</th>
+                                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Nama Teknisi</th>
+                                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Order Ditangani</th>
+                                <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Progres</th>
                                 <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
                             </tr>
                         </thead>
@@ -592,7 +627,7 @@ function TechnicianBreakdownWidget() {
                                                 ? 'bg-rose-50 text-rose-600 border-rose-200'
                                                 : 'bg-emerald-50 text-emerald-600 border-emerald-200'
                                                 }`}>
-                                                {tech.isOff ? 'INACTIVE' : 'ACTIVE'}
+                                                {tech.isOff ? 'NONAKTIF' : 'AKTIF'}
                                             </div>
                                         </td>
                                     </tr>
@@ -600,8 +635,8 @@ function TechnicianBreakdownWidget() {
                             ) : (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs opacity-50">
-                                        No technician activity detected
-                                    </td>
+                                    Tidak ada aktivitas teknisi terdeteksi
+                                </td>
                                 </tr>
                             )}
                         </tbody>

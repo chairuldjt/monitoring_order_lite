@@ -111,7 +111,7 @@ function OverdueOrdersContent() {
                     className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition-all font-bold flex items-center gap-2 active:scale-95 disabled:opacity-60 self-start text-sm"
                 >
                     <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                    Refresh
+                    Segarkan
                 </button>
             </div>
 
@@ -250,7 +250,7 @@ function OverdueOrdersContent() {
                                                 <span className="text-xs font-black text-amber-600 uppercase tracking-wider">{order.order_no}</span>
                                                 <div className="flex items-center gap-1 mt-1 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md w-fit">
                                                     <Timer className="w-2.5 h-2.5 text-rose-500" />
-                                                    <span className="text-[9px] font-black text-rose-600 uppercase tracking-tighter">{order.hours_overdue}j Overdue</span>
+                                                    <span className="text-[9px] font-black text-rose-600 uppercase tracking-tighter">{order.hours_overdue}j Terlambat</span>
                                                 </div>
                                             </div>
                                         </td>

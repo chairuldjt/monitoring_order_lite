@@ -50,7 +50,7 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                             className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
-                            title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
+                            title={isSidebarOpen ? "Sembunyikan Sidebar" : "Tampilkan Sidebar"}
                         >
                             <Menu className="w-5 h-5" />
                         </button>
@@ -98,14 +98,14 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
                                         className="flex items-center gap-3 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-violet-600 transition"
                                         onClick={() => setIsProfileOpen(false)}
                                     >
-                                        <User className="w-4 h-4" /> Detail Account
+                                        <User className="w-4 h-4" /> Detail Akun
                                     </Link>
                                     <Link
                                         href="/settings"
                                         className="flex items-center gap-3 px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-violet-600 transition"
                                         onClick={() => setIsProfileOpen(false)}
                                     >
-                                        <Settings className="w-4 h-4" /> Account Setting
+                                        <Settings className="w-4 h-4" /> Pengaturan Akun
                                     </Link>
                                     <hr className="my-1 border-slate-50" />
                                     <button
@@ -115,7 +115,7 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
                                         }}
                                         className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition"
                                     >
-                                        <LogOut className="w-4 h-4" /> Logout
+                                        <LogOut className="w-4 h-4" /> Keluar
                                     </button>
                                 </div>
                             )}

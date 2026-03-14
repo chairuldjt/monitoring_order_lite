@@ -65,7 +65,7 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
     return (
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 animate-fade-in" onClick={onClose}>
             <div
-                className="bg-slate-50 w-full max-w-2xl max-h-[80vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden relative animate-scale-up"
+                className="bg-slate-50/95 backdrop-blur-md w-full max-w-2xl max-h-[85vh] rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden relative animate-scale-up border border-white/40"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Modal Header actions */}
@@ -101,35 +101,53 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
 
                             {/* Order Header Card */}
                             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden transition-all">
-                                <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-black p-8 text-white relative">
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-                                    <div className="relative z-10">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="text-blue-400 font-black text-sm tracking-widest uppercase">{order.order_no}</span>
-                                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${statusColors[order.status] || 'bg-slate-600'} text-white shadow-lg`}>
-                                                {order.status_desc || order.status.replace('_', ' ')}
-                                            </span>
-                                        </div>
-                                        <div className="max-w-xs">
-                                            <StatusTimer createDate={order.create_date} status={order.status} />
-                                        </div>
-
-                                        <h1 className="text-xl font-black leading-tight drop-shadow-sm pr-12 line-clamp-2">
-                                            {order.catatan || order.description || `Order ${order.order_no}`}
-                                        </h1>
-                                        <div className="flex flex-wrap items-center gap-4 mt-5 text-slate-400 font-medium text-xs">
-                                            <div className="flex items-center gap-1.5">
-                                                <MapPin className="w-3.5 h-3.5 opacity-70" />
-                                                <span className="font-bold opacity-60 uppercase tracking-tighter mr-1">Nama/Lokasi:</span>
-                                                {order.order_by || order.requester_name ? `${order.order_by || order.requester_name} / ` : ''}{order.location_desc || order.requester_unit || '-'}
-                                            </div>
-                                            {order.ext_phone && (
-                                                <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/5 text-blue-100">
-                                                    <span className="font-bold opacity-60 uppercase tracking-tighter text-[9px] mr-1">Ext:</span>
-                                                    <span className="font-bold uppercase tracking-wide">{order.ext_phone}</span>
+                                    <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 text-white relative">
+                                        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-[100px] -mr-32 -mt-32 animate-pulse"></div>
+                                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-[80px] -ml-32 -mb-32"></div>
+                                        <div className="relative z-10">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-white/60 font-black text-[10px] tracking-widest uppercase bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-sm">{order.order_no}</span>
+                                                    <span className={`text-[10px] font-black px-4 py-1.5 rounded-xl uppercase tracking-widest ${statusColors[order.status] || 'bg-slate-600'} text-white shadow-[0_8px_20px_-4px_rgba(0,0,0,0.3)] border border-white/20`}>
+                                                        {order.status_desc || order.status.replace('_', ' ')}
+                                                    </span>
                                                 </div>
-                                            )}
-                                        </div>
+                                                <div className="bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/10">
+                                                    <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="mb-6">
+                                                <StatusTimer createDate={order.create_date} status={order.status} />
+                                            </div>
+
+                                            <h1 className="text-2xl font-black leading-tight drop-shadow-xl pr-6">
+                                                {order.catatan || order.description || `Order ${order.order_no}`}
+                                            </h1>
+                                            <div className="flex flex-wrap items-center gap-4 mt-6">
+                                                <div className="flex items-center gap-2 text-white/70">
+                                                    <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center border border-white/10 backdrop-blur-sm">
+                                                        <MapPin className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 leading-none mb-1">Nama / Lokasi</p>
+                                                        <p className="text-xs font-bold text-white leading-none">
+                                                            {order.order_by || order.requester_name ? `${order.order_by || order.requester_name} / ` : ''}{order.location_desc || order.requester_unit || '-'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {order.ext_phone && (
+                                                    <div className="flex items-center gap-2 text-indigo-200">
+                                                        <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-400/20 backdrop-blur-sm">
+                                                            <Phone className="w-4 h-4" />
+                                                         </div>
+                                                         <div>
+                                                             <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 leading-none mb-1">Ekstensi</p>
+                                                             <p className="text-xs font-black text-white leading-none uppercase">{order.ext_phone}</p>
+                                                         </div>
+                                                     </div>
+                                                )}
+                                            </div>
                                     </div>
                                 </div>
                             </div>
@@ -138,15 +156,15 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
                             <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm overflow-x-auto custom-scrollbar">
                                 {[
                                     { id: 'order', label: 'Rincian', icon: Info },
-                                    { id: 'history', label: 'Riwayat', icon: History },
-                                    { id: 'photos', label: 'Foto', icon: ImageIcon },
+                                    { id: 'history', label: 'Linimasa', icon: Activity },
+                                    { id: 'photos', label: 'BUKTI', icon: ImageIcon },
                                 ].map((tab) => (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id as any)}
-                                        className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === tab.id
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                        className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${activeTab === tab.id
+                                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-800 text-white shadow-xl shadow-indigo-200 scale-105 z-10'
+                                            : 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'
                                             }`}
                                     >
                                         <tab.icon className="w-4 h-4 shrink-0" />
@@ -164,32 +182,47 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
                                 {activeTab === 'order' && (
                                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-5">
                                         <div>
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <div className="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center">
-                                                    <Info className="w-3.5 h-3.5 text-blue-600" />
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center shadow-inner">
+                                                    <Info className="w-4 h-4 text-indigo-600" />
                                                 </div>
-                                                <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">Catatan Lengkap SIMRS</h3>
+                                                <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-[0.2em]">Spesifikasi Order</h3>
                                             </div>
-                                            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-100">
-                                                <p className="text-slate-700 leading-relaxed font-medium whitespace-pre-wrap text-xs">
+                                            <div className="bg-gradient-to-br from-slate-50 to-indigo-50/20 rounded-[2rem] p-6 border border-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
+                                                <p className="text-slate-700 leading-relaxed font-bold whitespace-pre-wrap text-[11px] italic">
                                                     {order.catatan || order.description || 'Tidak ada catatan'}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                                            <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
-                                                <p className="text-[8px] text-slate-400 uppercase tracking-widest font-black mb-1 opacity-70">Teknisi</p>
-                                                <p className="text-xs font-black text-slate-800">{order.teknisi || '-'}</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm group hover:shadow-indigo-100 transition-all hover:-translate-y-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                                        <User className="w-3 h-3 text-emerald-600" />
+                                                    </div>
+                                                    <p className="text-[8px] text-slate-400 uppercase tracking-widest font-black">Teknisi</p>
+                                                </div>
+                                                <p className="text-xs font-black text-slate-800 pl-8">{order.teknisi || 'MENUNGGU TEKNISI'}</p>
                                             </div>
-                                            <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
-                                                <p className="text-[8px] text-slate-400 uppercase tracking-widest font-black mb-1 opacity-70">Waktu Order</p>
-                                                <p className="text-xs font-black text-slate-800 truncate">{order.create_date || '-'}</p>
+                                            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm group hover:shadow-indigo-100 transition-all hover:-translate-y-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center">
+                                                        <Clock className="w-3 h-3 text-blue-600" />
+                                                    </div>
+                                                    <p className="text-[8px] text-slate-400 uppercase tracking-widest font-black">Waktu Dibuat</p>
+                                                </div>
+                                                <p className="text-xs font-black text-slate-800 pl-8 truncate">{order.create_date || '-'}</p>
                                             </div>
-                                            <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100 hover:col-span-1 lg:hover:shadow-sm transition-all">
-                                                <p className="text-[8px] text-slate-400 uppercase tracking-widest font-black mb-1 opacity-70">Selesai</p>
-                                                <p className={`text-xs font-black mt-0.5 truncate ${order.tgl_selesai ? 'text-emerald-600' : 'text-slate-400 italic font-medium'}`}>
-                                                    {order.tgl_selesai || 'Belum selesai'}
+                                            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm group hover:shadow-indigo-100 transition-all hover:-translate-y-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 flex items-center justify-center">
+                                                        <CheckCircle className="w-3 h-3 text-purple-600" />
+                                                    </div>
+                                                    <p className="text-[8px] text-slate-400 uppercase tracking-widest font-black">Waktu Selesai</p>
+                                                </div>
+                                                <p className={`text-xs font-black pl-8 truncate ${order.tgl_selesai ? 'text-emerald-600' : 'text-slate-400 italic font-medium'}`}>
+                                                    {order.tgl_selesai || 'MENUNGGU'}
                                                 </p>
                                             </div>
                                         </div>

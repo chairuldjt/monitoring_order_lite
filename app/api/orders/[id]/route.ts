@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getPayloadFromCookie } from '@/lib/jwt';
-import { getSIMRSOrderDetail, getSIMRSOrderHistory, getSIMRSOrderPhotos } from '@/lib/simrs-client';
+import { 
+    getSIMRSOrderDetail, 
+    getSIMRSOrderHistory, 
+    getSIMRSOrderPhotos,
+    parseSIMRSDate,
+    formatToStandardDate
+} from '@/lib/simrs-client';
 
 /**
  * GET /api/orders/[id] — Fetch single order LIVE from SIMRS
@@ -31,10 +37,24 @@ export async function GET(
         // Standardize status for our UI (lowercase)
         const localStatus = order.status_desc.toLowerCase().replace(' ', '_');
 
+        // Extract "TGL SELESAI" from history if not in main order
+        let doneDate = order.tgl_selesai || null;
+        if (!doneDate) {
+            const doneEntry = history.find((h: any) => 
+                ['DONE', 'VERIFIED'].includes((h.status_desc || '').toUpperCase().trim())
+            );
+            if (doneEntry) {
+                const rawDoneDate = doneEntry.status_date || doneEntry.create_date || '';
+                const parsed = parseSIMRSDate(rawDoneDate);
+                doneDate = parsed ? formatToStandardDate(parsed) : rawDoneDate;
+            }
+        }
+
         return NextResponse.json({
             data: {
                 ...order,
                 status: localStatus,
+                tgl_selesai: doneDate,
                 photos: photos || [],
                 history: history.map((h: any) => ({
                     id: h.history_id || Math.random(),

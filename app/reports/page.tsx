@@ -6,13 +6,14 @@ import {
     BarChart3, PieChart, TrendingUp,
     ArrowLeft, RefreshCw, LayoutGrid, MapPin,
     ClipboardList, CheckCircle, Clock,
-    FileSpreadsheet, Calendar, X
+    FileSpreadsheet, Calendar, X, Activity
 } from 'lucide-react';
 import Link from 'next/link';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart as RePieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
+import { toast } from 'sonner';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
@@ -30,7 +31,6 @@ function ReportsContent() {
     const [exporting, setExporting] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [lastSync, setLastSync] = useState<string | Date | null>(null);
-    const [showSyncModal, setShowSyncModal] = useState(false);
     const [syncResult, setSyncResult] = useState<{ success: boolean, message: string, count: number } | null>(null);
     const [showDateModal, setShowDateModal] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -102,16 +102,16 @@ function ReportsContent() {
             const res = await fetch('/api/orders/sync', { method: 'POST' });
             const data = await res.json();
             if (res.ok) {
-                setSyncResult({
-                    success: true,
-                    message: data.message || 'Sinkronisasi berhasil',
-                    count: data.count || 0
-                });
+                const message = data.message || 'Sinkronisasi berhasil';
+                const count = data.count || 0;
+                setSyncResult({ success: true, message, count });
                 setLastSync(new Date().toISOString());
-                setShowSyncModal(true);
+                toast.success(message, {
+                    description: `${count} order telah diproses.`,
+                });
                 fetchStats();
             } else {
-                setError(data.error || 'Gagal sinkronisasi');
+                toast.error(data.error || 'Gagal sinkronisasi');
             }
         } catch (err) {
             setError('Gagal menghubungi server sync');
@@ -156,34 +156,6 @@ function ReportsContent() {
 
     return (
         <div className="min-h-screen p-4 md:p-8 space-y-8 animate-fade-in relative pb-20 bg-[#F8FAFC]">
-            {/* Sync Modal */}
-            {showSyncModal && syncResult && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowSyncModal(false)}></div>
-                    <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10 w-full max-w-sm animate-scale-in text-center border border-slate-100">
-                        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-emerald-100 shadow-inner">
-                            <CheckCircle className="w-10 h-10 text-emerald-500" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-tight">Sync Berhasil!</h2>
-                        <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl mb-8">
-                            <p className="text-slate-600 font-bold text-sm leading-relaxed">
-                                {syncResult.message}
-                            </p>
-                            <div className="flex items-center justify-center gap-2 mt-2">
-                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{syncResult.count} Order diproses</span>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setShowSyncModal(false)}
-                            className="w-full py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
-                        >
-                            Tutup
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {/* Custom Date Modal */}
             {showDateModal && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -265,13 +237,10 @@ function ReportsContent() {
                             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 border border-white/20">
                                 <BarChart3 className="w-6 h-6 text-white" />
                             </div>
-                            <div>
-                                <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-none">Analytics & Reports</h1>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.15em] mt-1.5 flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                                    Real-time Analysis
-                                </p>
-                            </div>
+                            <div className="flex flex-col">
+                        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Analisis Laporan</h1>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1 opacity-80">Laporan Produksi Langsung</p>
+                    </div>
                         </div>
                     </div>
 
@@ -314,13 +283,13 @@ function ReportsContent() {
                         {/* Action Group */}
                         <div className="flex items-center gap-2 border-l border-slate-200 pl-4 ml-1">
                             <button
-                                onClick={handleSync}
-                                disabled={syncing}
-                                className="bg-slate-900 text-white px-4 py-2.5 rounded-xl hover:shadow-lg transition-all font-black uppercase tracking-widest text-[10px] flex items-center gap-2 active:scale-95 disabled:opacity-60 h-10"
-                            >
-                                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-                                Sync Now
-                            </button>
+                        onClick={handleSync}
+                        disabled={syncing}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                        {syncing ? 'Menyinkronkan...' : 'Sinkron dari SIMRS'}
+                    </button>
                             <button
                                 onClick={handleExport}
                                 disabled={exporting}
@@ -413,10 +382,10 @@ function ReportsContent() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-3">
-                                <PieChart className="w-5 h-5 text-indigo-500" />
+                                <Activity className="w-5 h-5 text-fuchsia-500" />
                                 Distribusi Status
                             </h2>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1 ml-8">Persentase berdasarkan kondisi saat ini</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1 ml-8">Proporsi status saat ini</p>
                         </div>
                     </div>
 
