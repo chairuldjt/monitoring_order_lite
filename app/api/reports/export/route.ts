@@ -94,11 +94,6 @@ export async function GET(request: Request) {
                     horizontal: rowNumber === 1 ? 'center' : 'left'
                 };
             });
-
-            // Set row height for better readability if text wraps
-            if (rowNumber > 1) {
-                row.height = undefined; // Auto height based on content
-            }
         });
 
         // Generate Buffer
