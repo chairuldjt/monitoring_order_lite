@@ -2,7 +2,7 @@
 
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, Repeat, MapPin, Search, ArrowDown, ArrowUp, X, Phone, LayoutGrid, ListFilter, CheckCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Repeat, MapPin, Search, ArrowDown, ArrowUp, X, Phone, LayoutGrid, ListFilter, CheckCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RepeatOrdersPage() {
@@ -18,6 +18,7 @@ function RepeatOrdersContent() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [lastSync, setLastSync] = useState<string | Date | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [syncResult, setSyncResult] = useState<{ message: string; count: number } | null>(null);
@@ -46,6 +47,7 @@ function RepeatOrdersContent() {
             if (res.ok) {
                 const data = await res.json();
                 setOrders(data.data || []);
+                if (data.lastSync) setLastSync(data.lastSync);
             } else {
                 const data = await res.json();
                 setError(data.error || 'Gagal mengambil data');
@@ -69,6 +71,7 @@ function RepeatOrdersContent() {
                     message: data.message || 'Sinkronisasi berhasil', 
                     count: data.count || 0 
                 });
+                setLastSync(new Date().toISOString());
                 setShowSyncModal(true);
                 fetchOrders(true);
             } else {
@@ -84,6 +87,25 @@ function RepeatOrdersContent() {
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
+
+    const formatLastSync = (dateInput: any) => {
+        if (!dateInput) return null;
+        const date = new Date(dateInput);
+        if (isNaN(date.getTime())) return dateInput;
+
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        
+        if (isToday) return `Hari ini, ${timeStr}`;
+        
+        return date.toLocaleDateString('id-ID', { 
+            day: '2-digit', 
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).replace('.', ':');
+    };
 
     return (
         <div className="min-h-screen p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
@@ -133,7 +155,18 @@ function RepeatOrdersContent() {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                    {lastSync && (
+                        <div className="hidden sm:flex items-center gap-3 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/50 shadow-sm mr-2 group hover:bg-white/80 transition-all">
+                            <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Clock className="w-4 h-4 text-indigo-500" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Last Update</span>
+                                <span className="text-[11px] font-black text-slate-700 whitespace-nowrap">{formatLastSync(lastSync)}</span>
+                            </div>
+                        </div>
+                    )}
                     <button
                         onClick={handleSync}
                         disabled={syncing}

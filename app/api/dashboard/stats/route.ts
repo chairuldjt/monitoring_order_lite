@@ -6,6 +6,7 @@ import {
   parseSIMRSDate,
 } from '@/lib/simrs-client';
 import { getSystemSettings } from '@/lib/settings-helper';
+import pool from '@/lib/db';
 
 /**
  * Dashboard Stats — ALL data fetched LIVE from SIMRS API with server-side caching
@@ -117,33 +118,20 @@ export async function GET() {
       }))
       .slice(0, 10);
 
-    // 5. Repeat orders — group by service name (preferred) or catatan
-    const repeatGroups: Record<string, { count: number; units: Set<string> }> = {};
-    for (const order of allActiveOrders) {
-      const serviceName = (order as any).service_name?.trim();
-      const noteTitle = (order.catatan || '').split('\n')[0]?.trim();
-      
-      const groupKey = serviceName || noteTitle;
-      if (!groupKey) continue;
-
-      if (!repeatGroups[groupKey]) {
-        repeatGroups[groupKey] = { count: 0, units: new Set() };
-      }
-      repeatGroups[groupKey].count++;
-      if (order.location_desc) {
-        repeatGroups[groupKey].units.add(order.location_desc);
-      }
-    }
-
-    const repeatOrders = Object.entries(repeatGroups)
-      .filter(([, v]) => v.count > 1)
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 5)
-      .map(([title, v]) => ({
-        title,
-        count: v.count,
-        units: Array.from(v.units).join(', '),
-      }));
+    // 5. Repeat orders — taken from service-based repeat order cache (matching Tab Layanan)
+    const [dbRepeatRows]: any = await pool.query(`
+      SELECT 
+        service_name as title,
+        COUNT(*) as count,
+        GROUP_CONCAT(DISTINCT location_desc SEPARATOR ', ') as units
+      FROM simrs_orders_cache
+      WHERE service_name IS NOT NULL AND service_name != ''
+      GROUP BY service_catalog_id, service_name
+      HAVING count > 1
+      ORDER BY count DESC
+      LIMIT 5
+    `);
+    const repeatOrders = dbRepeatRows;
 
     // 6. Recent orders — most recent from all fetched orders, sorted by create_date
     const recentOrders = allActiveOrders

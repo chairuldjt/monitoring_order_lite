@@ -89,6 +89,17 @@ export async function GET(request: Request) {
             console.error('Error calculating avg completion time from SQL:', e);
         }
 
+        // 7. Get last sync time
+        let lastSync = null;
+        try {
+            const [syncRow]: any = await pool.query('SELECT MAX(last_synced) as last_sync FROM simrs_orders_cache');
+            if (syncRow[0] && syncRow[0].last_sync) {
+                lastSync = syncRow[0].last_sync;
+            }
+        } catch (e) {
+            console.error('Error fetching last sync:', e);
+        }
+
         return NextResponse.json({
             data: {
                 trends,
@@ -98,7 +109,8 @@ export async function GET(request: Request) {
                 summary: {
                     ...summary[0],
                     averageCompletionTime
-                }
+                },
+                lastSync
             }
         });
     } catch (error: any) {

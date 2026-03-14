@@ -247,7 +247,14 @@ export async function GET(request: Request) {
             if (sort === 'asc') repeatData.sort((a, b) => a.count - b.count);
             else repeatData.sort((a, b) => b.count - a.count);
 
-            return NextResponse.json({ data: repeatData });
+            // Get last sync time
+            let lastSynced = null;
+            const [syncRow]: any = await pool.query('SELECT MAX(last_synced) as last_sync FROM simrs_orders_cache');
+            if (syncRow[0] && syncRow[0].last_sync) {
+                lastSynced = syncRow[0].last_sync;
+            }
+
+            return NextResponse.json({ data: repeatData, lastSync: lastSynced });
         }
 
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });

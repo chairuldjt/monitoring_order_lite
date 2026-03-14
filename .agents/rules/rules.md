@@ -6,5 +6,5 @@ trigger: always_on
 2.wajib restfull api
 3.berjalan di port 5015
 4.saya menggunakan terminal powershell sebagai default terminal
-5.direktori mysql di E:\Project\xampp\mysql\bin
+5.mysql server terinstal secara globar dan sudah ada di path
 6.buat core design agar kedepannya design konsisten
