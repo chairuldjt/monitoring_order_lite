@@ -170,6 +170,8 @@ async function initDatabase() {
             service_catalog_id VARCHAR(50),
             service_name VARCHAR(255),
             teknisi TEXT,
+            follow_up_date DATETIME NULL,
+            done_date DATETIME NULL,
             last_synced TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_location (location_desc),
             INDEX idx_ext (ext_phone),
@@ -177,6 +179,20 @@ async function initDatabase() {
             INDEX idx_create_date (create_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+
+    // Ensure columns exist in simrs_orders_cache
+    console.log('🔄 Checking columns for table: simrs_orders_cache');
+    const [cacheColumns]: any = await connection.query(`SHOW COLUMNS FROM simrs_orders_cache`);
+    const cacheColumnNames = cacheColumns.map((c: any) => c.Field);
+
+    if (!cacheColumnNames.includes('follow_up_date')) {
+        console.log('   ➕ Adding column: follow_up_date');
+        await connection.query(`ALTER TABLE simrs_orders_cache ADD COLUMN follow_up_date DATETIME NULL AFTER teknisi`);
+    }
+    if (!cacheColumnNames.includes('done_date')) {
+        console.log('   ➕ Adding column: done_date');
+        await connection.query(`ALTER TABLE simrs_orders_cache ADD COLUMN done_date DATETIME NULL AFTER follow_up_date`);
+    }
 
     // ================================
     // CLEANUP: Drop local orders tables (Legacy cleanup, but KEEP notifications)
