@@ -34,6 +34,21 @@ export async function GET(
             return NextResponse.json({ error: 'Order tidak ditemukan di SIMRS' }, { status: 404 });
         }
 
+        const normalizedPhotos = (photos || []).map((photo: any, index: number) => {
+            const photoId = photo.id || photo.photo_id || photo.photoId || null;
+            const proxiedUrl = photoId ? `/api/photos/${photoId}` : '';
+
+            return {
+                id: photoId || `photo-${index}`,
+                thumbnail: proxiedUrl,
+                full: proxiedUrl,
+                image_url: proxiedUrl,
+                url: proxiedUrl,
+                created_at: photo.create_date || photo.created_at || '',
+                user_name: photo.user_name || photo.nama_lengkap || photo.nama_teknisi || photo.teknisi_name || '',
+            };
+        });
+
         // Standardize status for our UI (lowercase)
         const localStatus = order.status_desc.toLowerCase().replace(' ', '_');
 
@@ -55,7 +70,7 @@ export async function GET(
                 ...order,
                 status: localStatus,
                 tgl_selesai: doneDate,
-                photos: photos || [],
+                photos: normalizedPhotos,
                 history: history.map((h: any) => ({
                     id: h.history_id || Math.random(),
                     status: h.status_desc?.toLowerCase().replace(' ', '_') || 'unknown',

@@ -42,6 +42,10 @@ interface OrderDetail {
     photos?: any[];
 }
 
+function resolvePhotoUrl(photo: any): string {
+    return photo?.thumbnail || photo?.full || photo?.image_url || photo?.url || '';
+}
+
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
 
@@ -349,8 +353,8 @@ Maintenance: ${isMaintenance}`;
                                 <div className="grid grid-cols-2 gap-3">
                                     {order.photos.map((photo, idx) => (
                                         <div key={idx} className="group relative aspect-square bg-slate-50 rounded-xl overflow-hidden border border-slate-200 p-1 transition-all hover:scale-105 active:scale-95">
-                                            <img src={photo.image_url || photo.url} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
-                                            <a href={photo.image_url || photo.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10"></a>
+                                            <img src={resolvePhotoUrl(photo)} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                                            <a href={resolvePhotoUrl(photo)} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10"></a>
                                         </div>
                                     ))}
                                 </div>
