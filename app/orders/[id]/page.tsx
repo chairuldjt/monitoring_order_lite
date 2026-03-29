@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { StatusTimer } from '@/components/StatusTimer';
+import { Lightbox } from '@/components/ui/Lightbox';
 import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
@@ -60,6 +61,8 @@ function OrderDetailContent({ id }: { id: string }) {
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
     const fetchOrder = async () => {
         setLoading(true);
@@ -135,8 +138,10 @@ Maintenance: ${isMaintenance}`;
 
     // Normalized Status for Logic
     const st = (order.status || '').toUpperCase().trim().replace(/[\s\.\-]+/g, '_');
+    const photoUrls = (order.photos || []).map(resolvePhotoUrl).filter(Boolean);
 
     return (
+        <>
         <div className="min-h-screen bg-[#F1F5F9] relative flex flex-col font-sans">
             <div className="relative z-10 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-5 animate-fade-in pb-20">
                 {/* Header Section */}
@@ -352,10 +357,23 @@ Maintenance: ${isMaintenance}`;
                             {order.photos && order.photos.length > 0 ? (
                                 <div className="grid grid-cols-2 gap-3">
                                     {order.photos.map((photo, idx) => (
-                                        <div key={idx} className="group relative aspect-square bg-slate-50 rounded-xl overflow-hidden border border-slate-200 p-1 transition-all hover:scale-105 active:scale-95">
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => {
+                                                setLightboxIndex(idx);
+                                                setIsLightboxOpen(true);
+                                            }}
+                                            className="group relative aspect-square bg-slate-50 rounded-xl overflow-hidden border border-slate-200 p-1 transition-all hover:scale-105 active:scale-95 text-left"
+                                        >
                                             <img src={resolvePhotoUrl(photo)} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
-                                            <a href={resolvePhotoUrl(photo)} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10"></a>
-                                        </div>
+                                            <div className="absolute inset-1 rounded-lg bg-slate-950/0 group-hover:bg-slate-950/20 transition-colors flex items-end justify-between p-2">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-white/0 group-hover:text-white transition-colors">
+                                                    Lihat
+                                                </span>
+                                                <ExternalLink className="w-3.5 h-3.5 text-white/0 group-hover:text-white transition-colors" />
+                                            </div>
+                                        </button>
                                     ))}
                                 </div>
                             ) : (
@@ -369,5 +387,13 @@ Maintenance: ${isMaintenance}`;
                 </div>
             </div>
         </div>
+        {isLightboxOpen && photoUrls.length > 0 && (
+            <Lightbox
+                images={photoUrls}
+                initialIndex={lightboxIndex}
+                onClose={() => setIsLightboxOpen(false)}
+            />
+        )}
+        </>
     );
 }
