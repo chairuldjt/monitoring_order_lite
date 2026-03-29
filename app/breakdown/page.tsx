@@ -91,7 +91,7 @@ export default function TechnicianBreakdownPage() {
                             Beban Kerja Teknisi
                         </h1>
                         <p className="text-slate-500 font-medium mt-1 flex items-center gap-2">
-                            Analisis performa dari EServiceDesk
+                            Analisis performa dari Webmin
                         </p>
                     </div>
                 </div>
@@ -139,7 +139,7 @@ export default function TechnicianBreakdownPage() {
                     </div>
                     <div className="mt-6 flex items-center gap-2 text-violet-100/70 text-sm font-medium">
                         <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        Live data from EServiceDesk
+                        Live data from SIMRS
                     </div>
                 </div>
 
@@ -301,7 +301,7 @@ export default function TechnicianBreakdownPage() {
                                                     📅
                                                 </div>
                                                 <p className="font-bold text-lg">No data for {new Date(selectedDate).toLocaleDateString('id-ID', { dateStyle: 'long' })}</p>
-                                                <p className="text-sm">Try selecting another date or check EServiceDesk directly.</p>
+                                                <p className="text-sm">Try selecting another date or check SIMRS directly.</p>
                                             </div>
                                         </td>
                                     </tr>

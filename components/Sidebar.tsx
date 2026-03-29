@@ -22,7 +22,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Over Follow Up', path: '/overdue', icon: AlertTriangle },
         { name: 'Over Pending', path: '/pending', icon: Clock },
         { name: 'Order Berulang', path: '/repeat', icon: Repeat },
-        { name: 'Beban Teknisi', path: '/breakdown', icon: Users },
+        { name: 'Monitoring Teknisi', path: '/breakdown', icon: Users },
         { name: 'Laporan', path: '/reports', icon: BarChart2 },
         { name: 'Pengaturan', path: '/settings', icon: Settings },
     ];
