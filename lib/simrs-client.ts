@@ -48,6 +48,7 @@ export interface SIMRSOrder {
     service_name?: string;
     follow_up_date?: string | null;
     done_date?: string | null;
+    tgl_selesai?: string | null;
 }
 
 export interface SIMRSSummary {
@@ -212,6 +213,7 @@ export async function getSIMRSOrdersByStatus(statusId: number, bypassCache = fal
                 service_catalog_id: order.service_catalog_id || order.service_id,
                 teknisi: (order.teknisi || '').replace(/\|$/, '').trim(),
                 service_name: order.service_name || order.service || '',
+                tgl_selesai: order.tgl_selesai || order.done_date || null,
             };
         });
 
@@ -279,6 +281,7 @@ export async function getSIMRSOrderDetail(orderId: number | string): Promise<SIM
             service_catalog_id: order.service_catalog_id || order.service_id,
             teknisi: (order.nama_teknisi || order.teknisi || '').replace(/\|$/, '').trim(),
             service_name: order.service_name || order.service || '',
+            tgl_selesai: order.tgl_selesai || order.done_date || null,
         };
 
         // If order_by is still empty, we can't easily get it here without history
